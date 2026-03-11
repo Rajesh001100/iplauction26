@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IPL Mega Auction Platform</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  
+  <div id="login-screen" class="screen">
+    <div class="login-card">
+      <div class="logo-area">
+        <h1>IPL MEGA AUCTION 🏏</h1>
+        <p>The Ultimate Cricketing Battle</p>
+      </div>
+      <form id="login-form">
+        <label for="role">Select Your Role</label>
+        <select id="role" required>
+          <option value="" disabled selected>Select Role...</option>
+          <option value="admin">Auctioneer (Admin)</option>
+          <hr>
+          <!-- injected via js -->
+        </select>
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Enter simple pass" required>
+        <button type="submit" class="btn-primary" id="login-btn">ENTER AUCTION ARENA</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="main-app" class="screen hidden">
+    <header class="app-header">
+      <div class="brand">
+        <h1>IPL AUCTION</h1>
+      </div>
+      <div class="user-info">
+        <span id="welcome-msg"></span>
+        <button id="logout-btn" class="btn-outline">Logout</button>
+      </div>
+    </header>
+
+    <div class="dashboard-grid">
+      
+      <!-- Live Auction Area -->
+      <section class="live-auction-area glass-panel">
+        <div class="section-title">
+          <h2>LIVE ACTION</h2>
+          <div class="pulse-indicator"></div>
+        </div>
+
+        <div id="no-active-player" class="empty-state">
+          <p>Awaiting next player to go under the hammer...</p>
+        </div>
+
+        <div id="active-player-card" class="player-card active-card hidden">
+           <!-- Rendered via JS -->
+        </div>
+
+        <div id="auction-controls" class="controls-area hidden">
+           <!-- Admin Controls -->
+           <div id="admin-controls" class="hidden">
+             <h3>Auctioneer Desk</h3>
+             <div class="admin-actions">
+               <button id="btn-sold" class="btn-success">SOLD TO HIGHEST BIDDER</button>
+               <button id="btn-unsold" class="btn-danger">MARK UNSOLD</button>
+             </div>
+           </div>
+
+           <!-- Team Controls -->
+           <div id="team-controls" class="hidden">
+             <h3>Place Bid</h3>
+             <div class="bid-actions">
+               <button class="btn-bid" data-amount="10">+ ₹10</button>
+               <button class="btn-bid" data-amount="20">+ ₹20</button>
+               <button class="btn-bid" data-amount="50">+ ₹50</button>
+               <button class="btn-bid" data-amount="100">+ ₹100</button>
+             </div>
+           </div>
+        </div>
+      </section>
+
+      <!-- Up Next / Player List Area -->
+      <section class="players-list-area glass-panel">
+        <div class="section-header-flex">
+          <h2>ALL PLAYERS</h2>
+          <div id="admin-add-player" class="hidden">
+            <button id="btn-new-player" class="btn-secondary">Add Player</button>
+          </div>
+        </div>
+        
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="upcoming">Upcoming</button>
+          <button class="tab-btn" data-tab="sold">Sold</button>
+          <button class="tab-btn" data-tab="unsold">Unsold</button>
+        </div>
+
+        <div id="players-container" class="scroll-list">
+          <!-- Rendered via JS -->
+        </div>
+      </section>
+
+      <!-- Teams Stats Area -->
+      <section class="teams-stats-area glass-panel">
+        <h2>FRANCHISE STANDINGS</h2>
+        <div id="teams-container" class="scroll-list">
+           <!-- Rendered via JS -->
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- Modal for Add/Edit Player (Admin only) -->
+  <div id="player-modal" class="modal hidden">
+    <div class="modal-content glass-panel">
+      <span class="close-btn">&times;</span>
+      <h2 id="modal-title">Add/Edit Player</h2>
+      <form id="player-form">
+        <input type="hidden" id="p-id">
+        <label>Name</label>
+        <input type="text" id="p-name" required>
+        <label>Role</label>
+        <select id="p-role" required>
+          <option value="Batter">Batter</option>
+          <option value="Bowler">Bowler</option>
+          <option value="All-rounder">All-rounder</option>
+          <option value="Wicketkeeper">Wicketkeeper</option>
+        </select>
+        <label>Base Price (₹ Cr/Lakhs)</label>
+        <input type="number" id="p-baseprice" required>
+        <label>Image URL (Optional)</label>
+        <input type="text" id="p-img" placeholder="https://...">
+        <button type="submit" class="btn-primary mt-3">Save Player</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
