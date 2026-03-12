@@ -85,6 +85,7 @@
         <div class="section-header-flex">
           <h2>ALL PLAYERS</h2>
           <div id="admin-add-player" class="hidden">
+            <button id="btn-leaderboard" class="btn-primary" style="margin-right: 10px; background: linear-gradient(135deg, #FFD700, #DAA520); color: black;">Show Leaderboard</button>
             <button id="btn-reset-bids" class="btn-warning">Reset Bids</button>
             <button id="btn-accelerated" class="btn-outline">Accelerated Round</button>
             <button id="btn-new-player" class="btn-secondary">Add Player</button>
@@ -242,6 +243,17 @@
         <h3 id="sold-team-name">Team Name</h3>
       </div>
       <div id="sold-price" class="sold-price">₹10 Cr</div>
+    </div>
+  </div>
+
+  <!-- Modal for Leaderboard -->
+  <div id="leaderboard-modal" class="modal hidden">
+    <div class="modal-content glass-panel" style="width: 800px; max-width: 95vw;">
+      <span class="close-leaderboard-btn close-btn">&times;</span>
+      <h2 style="text-align: center; color: var(--primary); margin-bottom: 20px;">🏆 AUCTION LEADERBOARD 🏆</h2>
+      <div id="leaderboard-container" class="scroll-list" style="max-height: 500px;">
+        <!-- Leaderboard items will be injected here -->
+      </div>
     </div>
   </div>
 

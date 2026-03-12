@@ -59,6 +59,12 @@ const soldTeamLogo = document.getElementById('sold-team-logo');
 const soldTeamName = document.getElementById('sold-team-name');
 const soldPrice = document.getElementById('sold-price');
 
+// Leaderboard Elements
+const leaderboardModal = document.getElementById('leaderboard-modal');
+const leaderboardContainer = document.getElementById('leaderboard-container');
+const closeLeaderboardBtn = document.querySelector('.close-leaderboard-btn');
+const btnLeaderboard = document.getElementById('btn-leaderboard');
+
 // --- Initialization ---
 
 // Wait for initial state to populate login dropdown
@@ -371,9 +377,82 @@ if (btnAccelerated) {
       socket.emit('acceleratedRound');
     }
   });
+}// Admin: Leaderboard
+if (btnLeaderboard) {
+  btnLeaderboard.addEventListener('click', () => {
+    calculateAndShowLeaderboard();
+  });
 }
 
+function calculateAndShowLeaderboard() {
+  const teamsData = appState.teams.map(team => {
+    const squad = appState.players.filter(p => p.team === team.id);
+    
+    // Points Calculation Logic
+    let starPower = 0;
+    let balancePoints = 0;
+    
+    // 1. Star Power (Based on points/price value)
+    squad.forEach(p => {
+      // 1 point for every 10L spent (Value perception)
+      starPower += (p.finalPrice / 10);
+    });
 
+    // 2. Balance (Composition)
+    const counts = { Batter: 0, Bowler: 0, AllRounder: 0, Wicketkeeper: 0 };
+    squad.forEach(p => {
+      const role = p.role.replace('-', '').replace(' ', ''); // Handle 'All-rounder' or 'All rounder'
+      if (role.includes('Batter')) counts.Batter++;
+      if (role.includes('Bowler')) counts.Bowler++;
+      if (role.includes('All')) counts.AllRounder++;
+      if (role.includes('keeper')) counts.Wicketkeeper++;
+    });
+
+    // Award bonus points for reaching minimum balance
+    if (counts.Batter >= 5) balancePoints += 10;
+    if (counts.Bowler >= 5) balancePoints += 10;
+    if (counts.AllRounder >= 2) balancePoints += 10;
+    if (counts.Wicketkeeper >= 1) balancePoints += 10;
+
+    // 3. Roster Size
+    const rosterPoints = squad.length * 2;
+
+    const totalScore = (starPower + balancePoints + rosterPoints).toFixed(1);
+
+    return { ...team, squad, totalScore, counts };
+  });
+
+  // Sort by score
+  teamsData.sort((a, b) => b.totalScore - a.totalScore);
+
+  leaderboardContainer.innerHTML = '';
+  teamsData.forEach((t, idx) => {
+    leaderboardContainer.innerHTML += `
+      <div class="list-item" style="${idx === 0 ? 'border: 2px solid #FFD700; background: rgba(212, 175, 55, 0.1);' : ''}">
+        <div style="display:flex; align-items:center; gap:20px; width:100%;">
+          <div style="font-size:1.5rem; font-weight:900; color:var(--primary); width:30px;">${idx + 1}</div>
+          <img src="${t.logo || ''}" style="width:40px; height:40px; object-fit:contain;">
+          <div style="flex:1">
+            <div style="font-weight:800; font-size:1.1rem;">${t.name} ${idx === 0 ? '👑' : ''}</div>
+            <div style="font-size:0.8rem; color:var(--text-muted);">
+              ${t.counts.Batter} BAT | ${t.counts.Bowler} BOWL | ${t.counts.AllRounder} AR | ${t.counts.Wicketkeeper} WK
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:1.5rem; font-weight:900; color:var(--primary);">${t.totalScore}</div>
+            <div style="font-size:0.7rem; text-transform:uppercase;">Squad Rating</div>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  leaderboardModal.classList.remove('hidden');
+}
+
+closeLeaderboardBtn.addEventListener('click', () => {
+    leaderboardModal.classList.add('hidden');
+});
 
 // Admin: Reset Biddings Only
 const btnResetBids = document.getElementById('btn-reset-bids');
