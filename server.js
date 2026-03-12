@@ -74,9 +74,18 @@ io.on('connection', (socket) => {
 
   // Login verification
   socket.on('login', ({ role, teamId, password }, callback) => {
+    console.log(`Login attempt: role=${role}, teamId=${teamId}`);
+    
     if (role === 'admin') {
-      const dbAdminPass = db.globalState.adminPassword || process.env.ADMIN_PASSWORD || 'admin123';
-      if (password === dbAdminPass) {
+      const dbPass = db.globalState.adminPassword;
+      const envPass = process.env.ADMIN_PASSWORD;
+      const defaultPass = 'admin123';
+      
+      const winningPass = dbPass || envPass || defaultPass;
+      
+      console.log(`Checking admin pass against source: ${dbPass ? 'DB' : envPass ? 'ENV' : 'Default'}`);
+      
+      if (password === winningPass) {
         callback({ success: true, role: 'admin' });
       } else {
         callback({ success: false, message: 'Invalid Admin Password' });
