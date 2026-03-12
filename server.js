@@ -45,7 +45,8 @@ async function syncFromSupabase() {
       db.globalState = {
         activePlayerId: state.activePlayerId,
         currentBid: state.currentBid,
-        currentBidderId: state.currentBidderId
+        currentBidderId: state.currentBidderId,
+        adminPassword: state.admin_password // Sync from DB
       };
     }
     console.log('Synced with Supabase');
@@ -74,7 +75,8 @@ io.on('connection', (socket) => {
   // Login verification
   socket.on('login', ({ role, teamId, password }, callback) => {
     if (role === 'admin') {
-      if (password === (process.env.ADMIN_PASSWORD || 'admin123')) {
+      const dbAdminPass = db.globalState.adminPassword || process.env.ADMIN_PASSWORD || 'admin123';
+      if (password === dbAdminPass) {
         callback({ success: true, role: 'admin' });
       } else {
         callback({ success: false, message: 'Invalid Admin Password' });
