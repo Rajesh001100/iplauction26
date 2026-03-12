@@ -20,7 +20,6 @@
         <select id="role" required>
           <option value="" disabled selected>Select Role...</option>
           <option value="admin">Auctioneer (Admin)</option>
-          <hr>
           <!-- injected via js -->
         </select>
         <label for="password">Password</label>
@@ -86,6 +85,8 @@
         <div class="section-header-flex">
           <h2>ALL PLAYERS</h2>
           <div id="admin-add-player" class="hidden">
+            <button id="btn-reset-bids" class="btn-warning">Reset Bids</button>
+            <button id="btn-accelerated" class="btn-outline">Accelerated Round</button>
             <button id="btn-new-player" class="btn-secondary">Add Player</button>
           </div>
         </div>
@@ -130,10 +131,117 @@
         </select>
         <label>Base Price (₹ Cr/Lakhs)</label>
         <input type="number" id="p-baseprice" required>
+        
+        <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+          <input type="checkbox" id="p-overseas" style="width: auto; margin: 0;">
+          <label for="p-overseas" style="margin: 0; color: white;">Overseas Player ✈️</label>
+        </div>
+
         <label>Image URL (Optional)</label>
         <input type="text" id="p-img" placeholder="https://...">
+        
+        <hr style="border-color: rgba(192,192,192,0.1); margin-bottom: 15px;">
+        <label>Batting Statistics</label>
+        <div class="stats-inputs" style="margin-bottom: 15px;">
+          <div>
+            <label>Runs</label>
+            <input type="text" id="p-runs" placeholder="759">
+          </div>
+          <div>
+            <label>Matches</label>
+            <input type="text" id="p-matches" placeholder="15">
+          </div>
+          <div>
+            <label>Average</label>
+            <input type="text" id="p-average" placeholder="54.21">
+          </div>
+          <div>
+            <label>Strike Rate</label>
+            <input type="text" id="p-strike-rate" placeholder="156.17">
+          </div>
+          <div>
+            <label>Hs. Score</label>
+            <input type="text" id="p-hs" placeholder="108*">
+          </div>
+          <div>
+            <label>50s/100s</label>
+            <input type="text" id="p-fifties" placeholder="6/1">
+          </div>
+        </div>
+
+        <label>Bowling Statistics</label>
+        <div class="stats-inputs">
+          <div>
+            <label>Wickets</label>
+            <input type="text" id="p-wickets" placeholder="25">
+          </div>
+          <div>
+            <label>Matches</label>
+            <input type="text" id="p-bowl-matches" placeholder="15">
+          </div>
+          <div>
+            <label>Economy Rate</label>
+            <input type="text" id="p-economy" placeholder="8.27">
+          </div>
+          <div>
+            <label>Maidens</label>
+            <input type="text" id="p-maidens" placeholder="0">
+          </div>
+          <div>
+            <label>BBI</label>
+            <input type="text" id="p-bbi" placeholder="41/4">
+          </div>
+          <div>
+            <label>4Ws/5Ws</label>
+            <input type="text" id="p-four-five" placeholder="1/0">
+          </div>
+        </div>
+
+        <label>Wicketkeeping Statistics</label>
+        <div class="stats-inputs">
+          <div>
+            <label>Catches</label>
+            <input type="text" id="p-catches" placeholder="142">
+          </div>
+          <div>
+            <label>Stumpings</label>
+            <input type="text" id="p-stumpings" placeholder="42">
+          </div>
+        </div>
+
         <button type="submit" class="btn-primary mt-3">Save Player</button>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal for Team Squad -->
+  <div id="squad-modal" class="modal hidden">
+    <div class="modal-content glass-panel squad-modal-content">
+      <span class="close-squad-btn close-btn">&times;</span>
+      <h2 id="squad-title">Team Squad</h2>
+      <div id="squad-stats-summary" class="squad-summary">
+        <!-- Stats summary here -->
+      </div>
+      <div id="squad-players-list" class="scroll-list squad-list">
+        <!-- Players list here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Sold Animation Overlay -->
+  <div id="sold-overlay" class="sold-overlay hidden">
+    <div class="sold-content">
+      <div class="sold-stamp">SOLD</div>
+      <div class="sold-player-box">
+        <img id="sold-player-img" src="" alt="">
+        <h2 id="sold-player-name">Player Name</h2>
+      </div>
+      <div class="sold-to">TO</div>
+      <div class="sold-team-box">
+        <img id="sold-team-logo" src="" alt="">
+        <h3 id="sold-team-name">Team Name</h3>
+      </div>
+      <div id="sold-price" class="sold-price">₹10 Cr</div>
     </div>
   </div>
 

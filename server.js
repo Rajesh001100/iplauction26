@@ -1,138 +1,317 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
 
-// Serve static files
+// Supabase Setup
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// In-memory state for simplicity
-let teams = [
-  { id: 't1', name: 'CSK (Chennai Super Kings)', budget: 1000, players: [] },
-  { id: 't2', name: 'MI (Mumbai Indians)', budget: 1000, players: [] },
-  { id: 't3', name: 'RCB (Royal Challengers Bangalore)', budget: 1000, players: [] },
-  { id: 't4', name: 'KKR (Kolkata Knight Riders)', budget: 1000, players: [] },
-  { id: 't5', name: 'DC (Delhi Capitals)', budget: 1000, players: [] },
-  { id: 't6', name: 'RR (Rajasthan Royals)', budget: 1000, players: [] },
-  { id: 't7', name: 'PBKS (Punjab Kings)', budget: 1000, players: [] },
-  { id: 't8', name: 'SRH (Sunrisers Hyderabad)', budget: 1000, players: [] },
-  { id: 't9', name: 'LSG (Lucknow Super Giants)', budget: 1000, players: [] },
-  { id: 't10', name: 'GT (Gujarat Titans)', budget: 1000, players: [] },
-];
-
-let players = [
-  { id: 'p1', name: 'Virat Kohli', role: 'Batter', basePrice: 200, status: 'upcoming', team: null, finalPrice: null, img: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3' },
-  { id: 'p2', name: 'MS Dhoni', role: 'Wicketkeeper', basePrice: 200, status: 'upcoming', team: null, finalPrice: null, img: 'https://images.unsplash.com/photo-1624194639908-621aa906bcce?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3' },
-  { id: 'p3', name: 'Rohit Sharma', role: 'Batter', basePrice: 200, status: 'upcoming', team: null, finalPrice: null, img: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3' },
-  { id: 'p4', name: 'Rashid Khan', role: 'Bowler', basePrice: 150, status: 'upcoming', team: null, finalPrice: null, img: 'https://images.unsplash.com/photo-1593341646647-75b329d0e071?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3' },
-  { id: 'p5', name: 'Hardik Pandya', role: 'All-rounder', basePrice: 200, status: 'upcoming', team: null, finalPrice: null, img: 'https://images.unsplash.com/photo-1533501764662-7f938cbe22dc?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3' }
-];
-
-let globalState = {
-  activePlayerId: null,
-  currentBid: 0,
-  currentBidderId: null,
+let db = {
+  teams: [],
+  players: [],
+  globalState: {
+    activePlayerId: null,
+    currentBid: 0,
+    currentBidderId: null
+  }
 };
+
+// Initial Sync from Supabase
+async function syncFromSupabase() {
+  try {
+    const { data: teams } = await supabase.from('teams').select('*').order('id');
+    const { data: players } = await supabase.from('players').select('*').order('id');
+    const { data: state } = await supabase.from('global_state').select('*').eq('id', 1).single();
+
+    if (teams) db.teams = teams;
+    if (players) db.players = players;
+    if (state) {
+      db.globalState = {
+        activePlayerId: state.activePlayerId,
+        currentBid: state.currentBid,
+        currentBidderId: state.currentBidderId
+      };
+    }
+    console.log('Synced with Supabase');
+  } catch (err) {
+    console.error('Initial sync error:', err);
+  }
+}
+
+syncFromSupabase();
 
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
 
-  // Send initial state to the new client
-  socket.emit('initialState', { teams, players, globalState });
+  // Strip passwords before sending to client
+  const publicTeams = db.teams.map(t => {
+    const { password, ...publicData } = t;
+    return publicData;
+  });
 
-  // Admin: Set a player as active for auction
-  socket.on('setActivePlayer', ({ playerId }) => {
-    const player = players.find(p => p.id === playerId);
-    if (player) {
-      if(player.status === 'upcoming') {
-         globalState.activePlayerId = playerId;
-         globalState.currentBid = player.basePrice;
-         globalState.currentBidderId = null;
-         io.emit('stateUpdate', { globalState, players });
+  socket.emit('initialState', { 
+    teams: publicTeams, 
+    players: db.players, 
+    globalState: db.globalState 
+  });
+
+  // Login verification
+  socket.on('login', ({ role, teamId, password }, callback) => {
+    if (role === 'admin') {
+      if (password === (process.env.ADMIN_PASSWORD || 'admin123')) {
+        callback({ success: true, role: 'admin' });
+      } else {
+        callback({ success: false, message: 'Invalid Admin Password' });
+      }
+    } else {
+      const team = db.teams.find(t => t.id === teamId);
+      if (team && team.password === password) {
+        callback({ success: true, role: 'team', teamId: teamId });
+      } else {
+        callback({ success: false, message: 'Invalid Team Password' });
       }
     }
   });
 
-  // Team: Place a bid
-  socket.on('placeBid', ({ teamId, amount }) => {
-    // Validate bid
-    const team = teams.find(t => t.id === teamId);
-    if (team && globalState.activePlayerId) {
-      if (amount > globalState.currentBid && amount <= team.budget) {
-        globalState.currentBid = amount;
-        globalState.currentBidderId = teamId;
-        io.emit('stateUpdate', { globalState });
+  socket.on('setActivePlayer', async ({ playerId }) => {
+    const player = db.players.find(p => p.id === playerId);
+    if (player && player.status === 'upcoming') {
+      db.globalState.activePlayerId = playerId;
+      db.globalState.currentBid = player.basePrice;
+      db.globalState.currentBidderId = null;
+
+      await supabase.from('global_state').update({
+        activePlayerId: playerId,
+        currentBid: player.basePrice,
+        currentBidderId: null
+      }).eq('id', 1);
+
+      io.emit('stateUpdate', { globalState: db.globalState, players: db.players });
+    }
+  });
+
+  socket.on('placeBid', async ({ teamId, amount }) => {
+    const team = db.teams.find(t => t.id === teamId);
+    const activePlayer = db.players.find(p => p.id === db.globalState.activePlayerId);
+
+    if (team && activePlayer) {
+      if (team.players.length >= 25) {
+        socket.emit('auctionError', 'Squad limit (25 players) reached!');
+        return;
+      }
+      if (activePlayer.isOverseas) {
+        let overseasCount = team.players.filter(pid => {
+           let p = db.players.find(x => x.id === pid);
+           return p && p.isOverseas;
+        }).length;
+        if (overseasCount >= 8) {
+           socket.emit('auctionError', 'Overseas player limit (8 players) reached!');
+           return;
+        }
+      }
+
+      if (amount > db.globalState.currentBid && amount <= team.budget) {
+        db.globalState.currentBid = amount;
+        db.globalState.currentBidderId = teamId;
+        
+        await supabase.from('global_state').update({
+          currentBid: amount,
+          currentBidderId: teamId
+        }).eq('id', 1);
+
+        io.emit('stateUpdate', { globalState: db.globalState });
+      } else if (amount > team.budget) {
+        socket.emit('auctionError', 'Insufficient budget!');
       }
     }
   });
 
-  // Admin: Mark as sold
-  socket.on('markSold', () => {
-    if (globalState.activePlayerId && globalState.currentBidderId) {
-      const playerIdx = players.findIndex(p => p.id === globalState.activePlayerId);
-      const teamIdx = teams.findIndex(t => t.id === globalState.currentBidderId);
+  socket.on('markSold', async () => {
+    if (db.globalState.activePlayerId && db.globalState.currentBidderId) {
+      const playerIdx = db.players.findIndex(p => p.id === db.globalState.activePlayerId);
+      const teamIdx = db.teams.findIndex(t => t.id === db.globalState.currentBidderId);
 
       if (playerIdx !== -1 && teamIdx !== -1) {
-        const price = globalState.currentBid;
-        if (teams[teamIdx].budget >= price) {
-          // Process transaction
-          players[playerIdx].status = 'sold';
-          players[playerIdx].team = globalState.currentBidderId;
-          players[playerIdx].finalPrice = price;
+        const price = db.globalState.currentBid;
+        if (db.teams[teamIdx].budget >= price) {
+          const player = db.players[playerIdx];
+          const team = db.teams[teamIdx];
+          
+          player.status = 'sold';
+          player.team = db.globalState.currentBidderId;
+          
+          let bcciExcess = 0;
+          let finalPrice = price;
+          if(player.isOverseas && price > 1800) {
+             bcciExcess = price - 1800;
+             finalPrice = 1800;
+          }
 
-          teams[teamIdx].budget -= price;
-          teams[teamIdx].players.push(players[playerIdx].id);
+          player.finalPrice = finalPrice;
+          player.bcciExcess = bcciExcess;
+
+          team.budget -= price;
+          team.players.push(player.id);
 
           // Reset active player
-          globalState.activePlayerId = null;
-          globalState.currentBid = 0;
-          globalState.currentBidderId = null;
+          db.globalState.activePlayerId = null;
+          db.globalState.currentBid = 0;
+          db.globalState.currentBidderId = null;
 
-          io.emit('stateUpdate', { globalState, players, teams });
+          // Update Supabase
+          await Promise.all([
+            supabase.from('players').update({ 
+               status: 'sold', 
+               team: player.team, 
+               finalPrice: player.finalPrice, 
+               bcciExcess: player.bcciExcess 
+            }).eq('id', player.id),
+            supabase.from('teams').update({ 
+               budget: team.budget, 
+               players: team.players 
+            }).eq('id', team.id),
+            supabase.from('global_state').update({
+               activePlayerId: null,
+               currentBid: 0,
+               currentBidderId: null
+            }).eq('id', 1)
+          ]);
+
+          io.emit('stateUpdate', { 
+            globalState: db.globalState, 
+            players: db.players, 
+            teams: db.teams 
+          });
+          
+          io.emit('playerSold', {
+            player: player,
+            team: team,
+            price: price
+          });
         }
       }
     }
   });
 
-  // Admin: Mark as unsold
-  socket.on('markUnsold', () => {
-    if (globalState.activePlayerId) {
-      const playerIdx = players.findIndex(p => p.id === globalState.activePlayerId);
+  socket.on('markUnsold', async () => {
+    if (db.globalState.activePlayerId) {
+      const playerIdx = db.players.findIndex(p => p.id === db.globalState.activePlayerId);
       if (playerIdx !== -1) {
-        players[playerIdx].status = 'unsold';
+        const player = db.players[playerIdx];
+        player.status = 'unsold';
         
-        // Reset active player
-        globalState.activePlayerId = null;
-        globalState.currentBid = 0;
-        globalState.currentBidderId = null;
+        db.globalState.activePlayerId = null;
+        db.globalState.currentBid = 0;
+        db.globalState.currentBidderId = null;
+        
+        await Promise.all([
+          supabase.from('players').update({ status: 'unsold' }).eq('id', player.id),
+          supabase.from('global_state').update({
+            activePlayerId: null,
+            currentBid: 0,
+            currentBidderId: null
+          }).eq('id', 1)
+        ]);
 
-        io.emit('stateUpdate', { globalState, players });
+        io.emit('stateUpdate', { 
+          globalState: db.globalState, 
+          players: db.players 
+        });
       }
     }
   });
 
-  // Admin: Update player details or add new
-  socket.on('updatePlayer', (playerData) => {
+  socket.on('acceleratedRound', async () => {
+    const unsoldIds = db.players.filter(p => p.status === 'unsold').map(p => p.id);
+    db.players.forEach(p => {
+      if (p.status === 'unsold') p.status = 'upcoming';
+    });
+
+    if (unsoldIds.length > 0) {
+      await supabase.from('players').update({ status: 'upcoming' }).in('id', unsoldIds);
+    }
+
+    io.emit('stateUpdate', { players: db.players });
+  });
+
+  socket.on('resetBiddings', async () => {
+    db.players.forEach(p => {
+      p.status = 'upcoming';
+      p.team = null;
+      p.finalPrice = null;
+      p.bcciExcess = 0;
+    });
+
+    db.teams.forEach(t => {
+      t.budget = 10000;
+      t.players = [];
+    });
+
+    db.globalState = {
+      activePlayerId: null,
+      currentBid: 0,
+      currentBidderId: null
+    };
+
+    // Bulk update approach for Supabase
+    // Note: JS client doesn't do mass updates easily on different rows without identical data, 
+    // but here we are resetting MANY rows. It's better to fetch and upsert or use an RPC.
+    // For simplicity, we'll suggest an RPC or just do a few updates.
+    
+    await Promise.all([
+      supabase.from('players').update({ status: 'upcoming', team: null, finalPrice: null, bcciExcess: 0 }).neq('id', 'dummy'),
+      supabase.from('teams').update({ budget: 10000, players: [] }).neq('id', 'dummy'),
+      supabase.from('global_state').update({ activePlayerId: null, currentBid: 0, currentBidderId: null }).eq('id', 1)
+    ]);
+
+    io.emit('initialState', { 
+      teams: db.teams, 
+      players: db.players, 
+      globalState: db.globalState 
+    });
+  });
+
+  socket.on('updatePlayer', async (playerData) => {
     if(playerData.id) {
-       let idx = players.findIndex(p => p.id === playerData.id);
+       let idx = db.players.findIndex(p => p.id === playerData.id);
        if(idx !== -1) {
-           players[idx] = { ...players[idx], ...playerData };
+           db.players[idx] = { ...db.players[idx], ...playerData };
+           await supabase.from('players').upsert(db.players[idx]);
        }
     } else {
-       players.push({
+       const newPlayer = {
            ...playerData,
-           id: 'p' + (players.length + 1),
+           id: 'p' + (db.players.length + 1),
            status: 'upcoming',
            team: null,
-           finalPrice: null
-       });
+           finalPrice: null,
+           bcciExcess: 0
+       };
+       db.players.push(newPlayer);
+       await supabase.from('players').insert(newPlayer);
     }
-    io.emit('initialState', { teams, players, globalState }); // Sending full refresh
+
+    io.emit('initialState', { 
+      teams: db.teams, 
+      players: db.players, 
+      globalState: db.globalState 
+    }); 
   });
 
   socket.on('disconnect', () => {
