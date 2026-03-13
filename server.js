@@ -29,7 +29,7 @@ let db = {
     activePlayerId: null,
     currentBid: 0,
     currentBidderId: null,
-    timer: 30, // Default 30s
+    timer: 15, // Default 15s
     isTimerRunning: false
   }
 };
@@ -44,7 +44,7 @@ function saveHistory() {
 let timerInterval = null;
 function startTimer() {
   stopTimer();
-  db.globalState.timer = 90; // 90 seconds
+  db.globalState.timer = 15; // 15 seconds
   db.globalState.timerEndTime = Date.now() + (db.globalState.timer * 1000);
   continueTimer();
 }
@@ -53,15 +53,15 @@ function continueTimer() {
   if (timerInterval) clearInterval(timerInterval);
   db.globalState.isTimerRunning = true;
   db.globalState.timerEndTime = Date.now() + (db.globalState.timer * 1000);
-  
+
   timerInterval = setInterval(() => {
     const remaining = Math.max(0, Math.ceil((db.globalState.timerEndTime - Date.now()) / 1000));
     db.globalState.timer = remaining;
 
     if (db.globalState.timer > 0) {
-      io.emit('timerUpdate', { 
-        seconds: db.globalState.timer, 
-        endTime: db.globalState.timerEndTime 
+      io.emit('timerUpdate', {
+        seconds: db.globalState.timer,
+        endTime: db.globalState.timerEndTime
       });
     } else {
       stopTimer();
@@ -107,10 +107,10 @@ syncFromSupabase();
 
 io.on('connection', (socket) => {
   // ... initial emit ...
-  socket.emit('initialState', { 
-    teams: db.teams.map(({password, ...p}) => p), 
-    players: db.players, 
-    globalState: db.globalState 
+  socket.emit('initialState', {
+    teams: db.teams.map(({ password, ...p }) => p),
+    players: db.players,
+    globalState: db.globalState
   });
 
   socket.on('login', ({ role, teamId, password }, callback) => {
@@ -132,7 +132,7 @@ io.on('connection', (socket) => {
       db.globalState.activePlayerId = playerId;
       db.globalState.currentBid = player.basePrice;
       db.globalState.currentBidderId = null;
-      
+
       startTimer();
 
       await supabase.from('global_state').update({
@@ -154,7 +154,7 @@ io.on('connection', (socket) => {
     if (team && amount > db.globalState.currentBid && amount <= team.budget) {
       db.globalState.currentBid = amount;
       db.globalState.currentBidderId = teamId;
-      
+
       startTimer(); // Reset timer on every bid
 
       await supabase.from('global_state').update({
@@ -176,9 +176,9 @@ io.on('connection', (socket) => {
         const price = db.globalState.currentBid;
         player.status = 'sold';
         player.team = team.id;
-        
+
         // Handle overseas logic if needed...
-        player.finalPrice = price; 
+        player.finalPrice = price;
         team.budget -= price;
         team.players.push(player.id);
 
@@ -235,10 +235,10 @@ io.on('connection', (socket) => {
         ...db.players.map(p => supabase.from('players').update({ status: p.status, team: p.team }).eq('id', p.id))
       ]);
 
-      io.emit('initialState', { 
-        teams: db.teams.map(({password, ...p}) => p), 
-        players: db.players, 
-        globalState: db.globalState 
+      io.emit('initialState', {
+        teams: db.teams.map(({ password, ...p }) => p),
+        players: db.players,
+        globalState: db.globalState
       });
     }
   });
@@ -248,13 +248,13 @@ io.on('connection', (socket) => {
     if (db.globalState.activePlayerId) {
       db.globalState.timer += amount;
       db.globalState.timerEndTime = (db.globalState.timerEndTime || Date.now()) + (amount * 1000);
-      
+
       if (!db.globalState.isTimerRunning) {
-        continueTimer(); 
+        continueTimer();
       } else {
-        io.emit('timerUpdate', { 
-          seconds: db.globalState.timer, 
-          endTime: db.globalState.timerEndTime 
+        io.emit('timerUpdate', {
+          seconds: db.globalState.timer,
+          endTime: db.globalState.timerEndTime
         });
       }
     }
@@ -268,7 +268,7 @@ io.on('connection', (socket) => {
     const idx = db.players.findIndex(p => p.id === playerId);
     if (idx !== -1) {
       const player = db.players[idx];
-      
+
       // If player was sold, remove from team's roster and refund budget (optional but logical)
       if (player.status === 'sold' && player.team) {
         const team = db.teams.find(t => t.id === player.team);
@@ -281,28 +281,101 @@ io.on('connection', (socket) => {
 
       db.players.splice(idx, 1);
       await supabase.from('players').delete().eq('id', playerId);
-      
+
       io.emit('stateUpdate', { players: db.players, teams: db.teams });
     }
   });
 
   socket.on('updatePlayer', async (playerData) => {
-    if(playerData.id) {
-       let idx = db.players.findIndex(p => p.id === playerData.id);
-       if(idx !== -1) {
-           db.players[idx] = { ...db.players[idx], ...playerData };
-           await supabase.from('players').upsert(db.players[idx]);
-       }
+    if (playerData.id) {
+      let idx = db.players.findIndex(p => p.id === playerData.id);
+      if (idx !== -1) {
+        db.players[idx] = { ...db.players[idx], ...playerData };
+        await supabase.from('players').upsert(db.players[idx]);
+      }
     } else {
-       const newPlayer = {
-           ...playerData,
-           id: 'p' + (db.players.length + 1),
-           status: 'upcoming'
-       };
-       db.players.push(newPlayer);
-       await supabase.from('players').insert(newPlayer);
+      const newPlayer = {
+        ...playerData,
+        id: 'p' + (db.players.length + 1),
+        status: 'upcoming'
+      };
+      db.players.push(newPlayer);
+      await supabase.from('players').insert(newPlayer);
     }
-    io.emit('stateUpdate', { players: db.players }); 
+    io.emit('stateUpdate', { players: db.players });
+  });
+
+  socket.on('resetBiddings', async () => {
+    saveHistory();
+
+    // Reset players in memory
+    db.players.forEach(p => {
+      p.status = 'upcoming';
+      p.team = null;
+      p.finalPrice = null;
+    });
+
+    // Reset teams in memory
+    db.teams.forEach(t => {
+      t.budget = 10000;
+      t.players = [];
+    });
+
+    // Reset global state in memory
+    db.globalState.activePlayerId = null;
+    db.globalState.currentBid = 0;
+    db.globalState.currentBidderId = null;
+    stopTimer();
+
+    // Sync to Supabase
+    try {
+      await Promise.all([
+        supabase.from('global_state').update({
+          activePlayerId: null,
+          currentBid: 0,
+          currentBidderId: null
+        }).eq('id', 1),
+        // Use a filter that matches all rows for mass update
+        supabase.from('players').update({
+          status: 'upcoming',
+          team: null,
+          finalPrice: null
+        }).neq('id', 'all_reset_placeholder'),
+        supabase.from('teams').update({
+          budget: 10000,
+          players: []
+        }).neq('id', 'all_reset_placeholder')
+      ]);
+      console.log('Auction reset successfully in Supabase');
+    } catch (err) {
+      console.error('Error resetting biddings in Supabase:', err);
+    }
+
+    // Broadcast the full reset state to all clients
+    io.emit('initialState', {
+      teams: db.teams.map(({ password, ...p }) => p),
+      players: db.players,
+      globalState: db.globalState
+    });
+  });
+
+  socket.on('acceleratedRound', async () => {
+    saveHistory();
+    // Move all unsold players back to upcoming
+    db.players.forEach(p => {
+      if (p.status === 'unsold') {
+        p.status = 'upcoming';
+      }
+    });
+
+    try {
+      await supabase.from('players').update({ status: 'upcoming' }).eq('status', 'unsold');
+      console.log('Accelerated round: moved unsold players back to upcoming');
+    } catch (err) {
+      console.error('Error updating players for accelerated round:', err);
+    }
+
+    io.emit('stateUpdate', { players: db.players });
   });
 
   socket.on('disconnect', () => {
