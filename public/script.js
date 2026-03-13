@@ -1,4 +1,24 @@
-const socket = io();
+const socket = io({
+  transports: ['websocket', 'polling'],
+  upgrade: true,
+  rememberUpgrade: true
+});
+
+socket.on('connect', () => {
+  const statusEl = document.getElementById('conn-status');
+  if (statusEl) {
+    statusEl.textContent = 'Live';
+    statusEl.style.background = 'var(--success)';
+  }
+});
+
+socket.on('disconnect', () => {
+  const statusEl = document.getElementById('conn-status');
+  if (statusEl) {
+    statusEl.textContent = 'Offline';
+    statusEl.style.background = 'var(--danger)';
+  }
+});
 
 // State
 let currentUser = null; // { role: 'admin' | 'team' | 'viewer', id?: 't1' }
@@ -396,6 +416,7 @@ function renderPlayersList() {
     return;
   }
 
+  let html = '';
   filtered.forEach(p => {
     let rightSide = `<div class="p-list-price">${formatMoney(p.status === 'sold' ? p.finalPrice : p.basePrice)}</div>`;
     if (p.status === 'sold') {
@@ -418,9 +439,8 @@ function renderPlayersList() {
     }
 
     const img = p.img || 'https://images2.imgbox.com/6c/d2/8I1zS2mY_o.png'; 
-
     
-    playersContainer.innerHTML += `
+    html += `
       <div class="list-item ${p.status === 'sold' ? 'sold-item' : ''}">
         <div class="p-list-left">
            <div class="p-list-img-container">
@@ -439,17 +459,15 @@ function renderPlayersList() {
       </div>
     `;
   });
+  playersContainer.innerHTML = html;
 }
 
 function renderTeamsStats() {
-  teamsContainer.innerHTML = '';
-  
+  let html = '';
   const sortedTeams = [...appState.teams].sort((a, b) => b.budget - a.budget);
 
   sortedTeams.forEach(t => {
     const isMe = currentUser?.id === t.id;
-    // Calculate total spent (assuming starting budget was 10000L). 
-    // Since we dynamically update budget in state, spent = 10000 - current budget.
     const STARTING_BUDGET = 10000;
     const spent = STARTING_BUDGET - t.budget;
     const pctSpent = ((spent / STARTING_BUDGET) * 100).toFixed(1);
@@ -460,12 +478,12 @@ function renderTeamsStats() {
       return plt && plt.isOverseas;
     }).length;
 
-    teamsContainer.innerHTML += `
+    html += `
       <div class="list-item" style="${isMe ? 'border-color: var(--primary); background: rgba(59,130,246,0.1);' : ''}">
          <div class="team-item w-100" style="width: 100%;">
             <div class="team-top" style="display: flex; align-items: center; justify-content: space-between;">
                <div style="display: flex; align-items: center; gap: 10px;">
-                  ${t.logo ? `<img src="${t.logo}" alt="${t.name}" style="width: 25px; height: 25px; object-fit: contain;">` : ''}
+                  ${t.logo ? `<img src="${t.logo}" alt="${t.name}" style="width: 25px; height: 25px; object-fit: contain;" loading="lazy">` : ''}
                   <span class="team-name">${t.name} ${isMe ? '<span style="color:var(--primary);font-size:0.8rem;">(You)</span>' : ''}</span>
                </div>
                <span class="team-budget">${formatMoney(t.budget)}</span>
@@ -483,6 +501,7 @@ function renderTeamsStats() {
       </div>
     `;
   });
+  teamsContainer.innerHTML = html;
 }
 
 function updateRoleCounts() {
