@@ -1,17 +1,23 @@
 const socket = io();
 
 // State
-let currentUser = null; // { role: 'admin' | 'team', id?: 't1' }
+let currentUser = null; // { role: 'admin' | 'team' | 'viewer', id?: 't1' }
 let appState = {
   teams: [],
   players: [],
   globalState: {
     activePlayerId: null,
     currentBid: 0,
-    currentBidderId: null
+    currentBidderId: null,
+    timer: 0
   }
 };
 let currentTab = 'upcoming';
+let currentRoleFilter = 'all';
+let searchQuery = '';
+
+// Audio Effects
+const soldSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3'); // Celebration/Tada sound
 
 function formatMoney(lakhs) {
   if (lakhs >= 100) {
@@ -71,6 +77,9 @@ const btnLeaderboard = document.getElementById('btn-leaderboard');
 socket.on('initialState', (state) => {
   appState = state;
   populateLoginDropdown();
+  if (appState.globalState && appState.globalState.timerEndTime) {
+    startClientTimer(appState.globalState.timerEndTime);
+  }
   if (currentUser) {
     renderApp();
   }
@@ -78,6 +87,11 @@ socket.on('initialState', (state) => {
 
 socket.on('stateUpdate', (partialState) => {
   appState = { ...appState, ...partialState };
+  if (appState.globalState && appState.globalState.timerEndTime) {
+    startClientTimer(appState.globalState.timerEndTime);
+  } else if (appState.globalState && !appState.globalState.timerEndTime) {
+    if (clientTimerInterval) clearInterval(clientTimerInterval);
+  }
   if (currentUser) {
     renderApp();
   }
@@ -88,7 +102,75 @@ socket.on('auctionError', (msg) => {
 });
 
 socket.on('playerSold', (data) => {
+  soldSound.play().catch(e => console.log("Sound play failed", e));
   showSoldAnimation(data);
+});
+
+let clientTimerInterval = null;
+function startClientTimer(endTime) {
+  if (clientTimerInterval) clearInterval(clientTimerInterval);
+  updateTimerUI(endTime);
+  clientTimerInterval = setInterval(() => updateTimerUI(endTime), 100);
+}
+
+function updateTimerUI(endTime) {
+  const timerVal = document.getElementById('timer-value');
+  if (!timerVal) return;
+
+  const now = Date.now();
+  const remaining = endTime ? Math.max(0, Math.ceil((endTime - now) / 1000)) : 0;
+  
+  // Only update if the value actually changed
+  if (remaining !== parseInt(timerVal.textContent)) {
+    // Prevent overwriting the "Bidding Ended" text if the timer finished
+    if (remaining === 0 && timerVal.textContent === "Bidding Ended") return;
+
+    timerVal.textContent = remaining > 0 ? remaining : "0";
+    
+    if (remaining <= 5 && remaining > 0) {
+      timerVal.classList.add('timer-low');
+    } else {
+      timerVal.classList.remove('timer-low');
+    }
+    
+    // Manage bidding buttons
+    if (remaining === 0) {
+       document.querySelectorAll('.btn-bid').forEach(btn => btn.disabled = true);
+    } else {
+       document.querySelectorAll('.btn-bid').forEach(btn => btn.disabled = false);
+    }
+  }
+}
+
+socket.on('timerUpdate', (data) => {
+  const seconds = typeof data === 'object' ? data.seconds : data;
+  const endTime = typeof data === 'object' ? data.endTime : null;
+
+  appState.globalState.timer = seconds;
+  appState.globalState.timerEndTime = endTime;
+
+  if (endTime) {
+    startClientTimer(endTime);
+  } else {
+    if (clientTimerInterval) clearInterval(clientTimerInterval);
+    const timerVal = document.getElementById('timer-value');
+    if (timerVal) timerVal.textContent = seconds || "0";
+  }
+});
+
+socket.on('auctionTimeout', () => {
+  if (clientTimerInterval) clearInterval(clientTimerInterval);
+  document.querySelectorAll('.btn-bid').forEach(btn => btn.disabled = true);
+  const timerVal = document.getElementById('timer-value');
+  if (timerVal) {
+    timerVal.textContent = "Bidding Ended";
+    timerVal.classList.add('timer-low');
+  }
+  const auctionControlsDisplay = document.getElementById('team-controls');
+  if (auctionControlsDisplay) {
+    auctionControlsDisplay.style.opacity = '0.5';
+    auctionControlsDisplay.style.pointerEvents = 'none';
+  }
 });
 
 function populateLoginDropdown() {
@@ -132,11 +214,15 @@ loginForm.addEventListener('submit', (e) => {
 
       if (currentUser.role === 'admin') {
         welcomeMsg.textContent = 'Welcome, AuctioneerDesk';
-        document.documentElement.style.setProperty('--primary', '#8b5cf6');
-        document.documentElement.style.setProperty('--primary-hover', '#7c3aed');
+        document.body.classList.add('is-admin');
+        document.body.classList.remove('is-team');
+        document.documentElement.style.setProperty('--primary', '#d4af37');
+        document.documentElement.style.setProperty('--primary-hover', '#ffd700');
       } else {
         const team = appState.teams.find(t => t.id === currentUser.id);
         welcomeMsg.textContent = `Franchise: ${team.name}`;
+        document.body.classList.add('is-team');
+        document.body.classList.remove('is-admin');
       }
 
       renderApp();
@@ -145,6 +231,14 @@ loginForm.addEventListener('submit', (e) => {
     }
   });
 });
+
+const playerSearchInput = document.getElementById('player-search');
+if (playerSearchInput) {
+  playerSearchInput.addEventListener('input', (e) => {
+    searchQuery = e.target.value.toLowerCase();
+    renderPlayersList();
+  });
+}
 
 logoutBtn.addEventListener('click', () => {
   currentUser = null;
@@ -156,6 +250,7 @@ logoutBtn.addEventListener('click', () => {
 // --- UI Rendering ---
 
 function renderApp() {
+  updateRoleCounts();
   renderLiveAuction();
   renderPlayersList();
   renderTeamsStats();
@@ -173,7 +268,7 @@ function renderApp() {
 }
 
 function renderLiveAuction() {
-  const { activePlayerId, currentBid, currentBidderId } = appState.globalState;
+  const { activePlayerId, currentBid, currentBidderId, timer } = appState.globalState;
   
   if (!activePlayerId) {
     noActivePlayer.classList.remove('hidden');
@@ -188,62 +283,69 @@ function renderLiveAuction() {
 
   const player = appState.players.find(p => p.id === activePlayerId);
   const bidder = currentBidderId ? appState.teams.find(t => t.id === currentBidderId)?.name : 'No bids yet';
-  const img = player.img || 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3';
-  const playerStats = player.stats || { runs: '-', matches: '-', average: '-', strikeRate: '-', hs: '-', fiftiesHundreds: '-/-', wickets: '-', bowlMatches: '-', economy: '-', maidens: '-', bbi: '-', fourFive: '-/-' };
+  const img = player.img || 'https://images2.imgbox.com/6c/d2/8I1zS2mY_o.png'; // High-res generic placeholder
+  
+  const stats = player.stats || {};
 
-  let statsHtml = '';
-  const batGrid = `
-      <div class="player-stats-grid" style="margin-bottom: 5px;">
-        <div class="stat-box"><div class="stat-value">${playerStats.runs || '-'}</div><div class="stat-label">Runs</div></div>
-        <div class="stat-box"><div class="stat-value">${playerStats.matches || '-'}</div><div class="stat-label">Matches</div></div>
-        <div class="stat-box"><div class="stat-value">${playerStats.average || '-'}</div><div class="stat-label">Average</div></div>
-        <div class="stat-box"><div class="stat-value">${playerStats.strikeRate || '-'}</div><div class="stat-label">Strike Rate</div></div>
-        <div class="stat-box empty-box"></div>
-        <div class="stat-box"><div class="stat-value">${playerStats.hs || '-'}</div><div class="stat-label">Hs. Score</div></div>
-        <div class="stat-box"><div class="stat-value">${playerStats.fiftiesHundreds || '-/-'}</div><div class="stat-label">50s/100s</div></div>
-        <div class="stat-box empty-box"></div>
-      </div>
+  const getStat = (val) => (val === undefined || val === null || val === '') ? '-' : val;
+
+  const batStats = `
+    <div class="stat-box"><div class="stat-value">${getStat(stats.runs)}</div><div class="stat-label">Runs</div></div>
+    <div class="stat-box"><div class="stat-value">${getStat(stats.average)}</div><div class="stat-label">Avg</div></div>
+    <div class="stat-box"><div class="stat-value">${getStat(stats.strikeRate)}</div><div class="stat-label">S/R</div></div>
+    <div class="stat-box"><div class="stat-value">${getStat(stats.matches)}</div><div class="stat-label">Matches</div></div>
+    <div class="stat-box"><div class="stat-value">${getStat(stats.hs)}</div><div class="stat-label">HS</div></div>
+    <div class="stat-box"><div class="stat-value">${getStat(stats.fiftiesHundreds)}</div><div class="stat-label">50s/100s</div></div>
+    <div class="stat-box"><div class="stat-value">${getStat(stats.fours)}</div><div class="stat-label">4s</div></div>
+    <div class="stat-box"><div class="stat-value">${getStat(stats.sixes)}</div><div class="stat-label">6s</div></div>
   `;
 
-  const bowlGrid = `
-      <div class="player-stats-grid" style="margin-bottom: 5px;">
-        <div class="stat-box"><div class="stat-value">${playerStats.wickets || '-'}</div><div class="stat-label">Wickets</div></div>
-        <div class="stat-box"><div class="stat-value">${playerStats.bowlMatches || playerStats.matches || '-'}</div><div class="stat-label">Matches</div></div>
-        <div class="stat-box"><div class="stat-value">${playerStats.economy || '-'}</div><div class="stat-label">Economy</div></div>
-        <div class="stat-box"><div class="stat-value">${playerStats.maidens || '-'}</div><div class="stat-label">Maidens</div></div>
-        <div class="stat-box empty-box"></div>
-        <div class="stat-box"><div class="stat-value">${playerStats.bbi || '-'}</div><div class="stat-label">BBI</div></div>
-        <div class="stat-box"><div class="stat-value">${playerStats.fourFive || '-/-'}</div><div class="stat-label">4Ws/5Ws</div></div>
-        <div class="stat-box empty-box"></div>
-      </div>
+  const bowlStats = `
+    <div class="stat-box"><div class="stat-value">${getStat(stats.wickets)}</div><div class="stat-label">Wickets</div></div>
+    <div class="stat-box"><div class="stat-value">${getStat(stats.economy)}</div><div class="stat-label">Econ</div></div>
+    <div class="stat-box"><div class="stat-value">${getStat(stats.average || stats.bowlAvg)}</div><div class="stat-label">Avg</div></div>
+    <div class="stat-box"><div class="stat-value">${getStat(stats.bowlMatches)}</div><div class="stat-label">Matches</div></div>
+    <div class="stat-box"><div class="stat-value">${getStat(stats.bbi)}</div><div class="stat-label">BBI</div></div>
+    <div class="stat-box"><div class="stat-value">${getStat(stats.maidens)}</div><div class="stat-label">Maidens</div></div>
+    <div class="stat-box"><div class="stat-value">${getStat(stats.fourFive)}</div><div class="stat-label">4w/5w</div></div>
   `;
 
-  const wkGrid = `
-      <div class="player-stats-grid" style="margin-bottom: 5px;">
-        <div class="stat-box"><div class="stat-value">${playerStats.catches || '-'}</div><div class="stat-label">Catches</div></div>
-        <div class="stat-box"><div class="stat-value">${playerStats.stumpings || '-'}</div><div class="stat-label">Stumpings</div></div>
-        <div class="stat-box empty-box"></div>
-        <div class="stat-box empty-box"></div>
-      </div>
-  `;
+  const fieldStats = (stats.catches || stats.stumpings) ? `
+    <div class="stat-box"><div class="stat-value">${getStat(stats.catches)}</div><div class="stat-label">Catches</div></div>
+    <div class="stat-box"><div class="stat-value">${getStat(stats.stumpings)}</div><div class="stat-label">Stumpings</div></div>
+  ` : '';
 
-  if (player.role === 'Wicketkeeper') {
-    statsHtml = batGrid + wkGrid;
-  } else if (player.role === 'Batter') {
-    statsHtml = batGrid;
+  if (player.role === 'Batter') {
+    roleStatsHtml = `<div class="player-stats-grid">${batStats}</div>`;
   } else if (player.role === 'Bowler') {
-    statsHtml = bowlGrid;
+    roleStatsHtml = `<div class="player-stats-grid">${bowlStats}</div>`;
+  } else if (player.role === 'Wicketkeeper' || player.role === 'Wicketkeeper-Batsman') {
+    roleStatsHtml = `
+      <div class="player-stats-grid">${batStats}</div>
+      <div class="player-stats-grid" style="margin-top:5px;">${fieldStats}</div>
+    `;
   } else {
-    statsHtml = batGrid + bowlGrid;
+    // All-rounder
+    roleStatsHtml = `
+      <div class="player-stats-grid">${batStats}</div>
+      <div class="player-stats-grid" style="margin-top:5px;">${bowlStats}</div>
+    `;
   }
 
   activePlayerCard.innerHTML = `
+    ${player.jerseyNumber ? `<div class="jersey-badge" title="Jersey #${player.jerseyNumber}">${player.jerseyNumber}</div>` : ''}
+    <div class="bid-timer-container">
+       <span class="timer-label">TIME REMAINING</span>
+       <span class="timer-value ${timer <= 10 ? 'timer-low' : ''}" id="timer-value">${timer}</span>
+    </div>
     <img src="${img}" alt="${player.name}" class="player-img">
     <div class="player-info">
       <div class="player-name">${player.name} ${player.isOverseas ? '✈️' : ''}</div>
-      <div class="player-role">${player.role}</div>
+      <div class="player-role">${player.role} <span style="font-size: 0.7rem; color: var(--primary); margin-left: 5px;">
+        (${player.hasIplExp ? 'IPL Stats' : (player.isOverseas ? 'Intl T20' : 'Domestic T20')})
+      </span></div>
 
-      ${statsHtml}
+      ${roleStatsHtml}
 
       <div class="bid-details">
          <div class="text-muted">Current Bid</div>
@@ -252,26 +354,56 @@ function renderLiveAuction() {
       </div>
     </div>
   `;
+
+  if (appState.globalState.timerEndTime) {
+    updateTimerUI(appState.globalState.timerEndTime);
+  }
+
+  // Re-enable bidding UI for teams when a new player is set
+  const teamControlsDisplay = document.getElementById('team-controls');
+  if (teamControlsDisplay) {
+    teamControlsDisplay.style.opacity = '1';
+    teamControlsDisplay.style.pointerEvents = 'auto';
+  }
+  document.querySelectorAll('.btn-bid').forEach(btn => btn.disabled = false);
 }
 
 function renderPlayersList() {
   playersContainer.innerHTML = '';
-  const filtered = appState.players.filter(p => p.status === currentTab);
+  let filtered = appState.players.filter(p => p.status === currentTab);
+
+  if (currentRoleFilter !== 'all') {
+    filtered = filtered.filter(p => {
+      if (currentRoleFilter === 'Wicketkeeper-Batsman') {
+        return p.role === 'Wicketkeeper-Batsman' || p.role === 'Wicketkeeper';
+      }
+      if (currentRoleFilter === 'Overseas') {
+        return p.isOverseas === true;
+      }
+      if (currentRoleFilter === 'Domestic') {
+        return p.isOverseas !== true;
+      }
+      return p.role === currentRoleFilter;
+    });
+  }
+
+  if (searchQuery) {
+    filtered = filtered.filter(p => p.name.toLowerCase().includes(searchQuery));
+  }
 
   if (filtered.length === 0) {
-    playersContainer.innerHTML = `<div class="text-muted" style="padding:20px;text-align:center;">No players in this category.</div>`;
+    playersContainer.innerHTML = `<div class="text-muted" style="padding:20px;text-align:center;">No players matches this filter or search.</div>`;
     return;
   }
 
   filtered.forEach(p => {
-    let rightSide = `<div class="p-list-price">${formatMoney(p.basePrice)}</div>`;
+    let rightSide = `<div class="p-list-price">${formatMoney(p.status === 'sold' ? p.finalPrice : p.basePrice)}</div>`;
     if (p.status === 'sold') {
       const team = appState.teams.find(t => t.id === p.team);
       rightSide = `
         <div style="text-align:right">
            <div class="p-list-price">${formatMoney(p.finalPrice)}</div>
            <div style="font-size:0.8rem; color:#94a3b8;">${team?.name.split(' ')[0] || 'Unknown'}</div>
-           ${p.bcciExcess ? `<div style="font-size:0.75rem; color:var(--success);">+ ${formatMoney(p.bcciExcess)} to BCCI</div>` : ''}
         </div>
       `;
     }
@@ -279,23 +411,28 @@ function renderPlayersList() {
     let adminAction = '';
     if (currentUser.role === 'admin') {
       if (p.status === 'upcoming') {
-        adminAction += `<button class="btn-outline" style="font-size:0.8rem; padding: 5px 10px; margin-left: 10px;" onclick="startAuction('${p.id}')">Start</button>`;
+        adminAction += `<button class="btn-outline" style="font-size:0.75rem; padding: 4px 8px; margin-left: 10px;" onclick="startAuction('${p.id}')">Start</button>`;
       }
-      adminAction += `<button class="btn-secondary" style="font-size:0.8rem; padding: 5px 10px; margin-left: 5px;" onclick="editPlayer('${p.id}')">Edit</button>`;
+      adminAction += `<button class="btn-secondary" style="font-size:0.75rem; padding: 4px 8px; margin-left: 5px;" onclick="editPlayer('${p.id}')">Edit</button>`;
+      adminAction += `<button class="btn-danger" style="font-size:0.75rem; padding: 4px 8px; margin-left: 5px;" onclick="deletePlayer('${p.id}')">Delete</button>`;
     }
 
-    const img = p.img || 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=100&auto=format&fit=crop&q=60';
+    const img = p.img || 'https://images2.imgbox.com/6c/d2/8I1zS2mY_o.png'; 
+
     
     playersContainer.innerHTML += `
-      <div class="list-item">
+      <div class="list-item ${p.status === 'sold' ? 'sold-item' : ''}">
         <div class="p-list-left">
-           <img src="${img}" class="p-list-avatar">
+           <div class="p-list-img-container">
+             <img src="${img}" class="p-list-avatar" loading="lazy">
+             ${p.jerseyNumber ? `<div class="p-list-jersey">${p.jerseyNumber}</div>` : ''}
+           </div>
            <div class="p-list-info">
               <span class="p-list-name">${p.name} ${p.isOverseas ? '✈️' : ''}</span>
               <span class="p-list-role">${p.role}</span>
            </div>
         </div>
-        <div style="display:flex;align-items:center;">
+        <div style="display:flex;align-items:center; gap: 5px;">
            ${rightSide}
            ${adminAction}
         </div>
@@ -348,6 +485,39 @@ function renderTeamsStats() {
   });
 }
 
+function updateRoleCounts() {
+  const playersInTab = appState.players.filter(p => p.status === currentTab);
+  
+  const counts = {
+    all: playersInTab.length,
+    Batter: 0,
+    Bowler: 0,
+    'All-rounder': 0,
+    'Wicketkeeper-Batsman': 0,
+    'Overseas': 0,
+    'Domestic': 0
+  };
+
+  playersInTab.forEach(p => {
+    if (p.isOverseas) {
+      counts['Overseas']++;
+    } else {
+      counts['Domestic']++;
+    }
+    
+    if (p.role === 'Wicketkeeper') {
+      counts['Wicketkeeper-Batsman']++;
+    } else if (counts[p.role] !== undefined) {
+      counts[p.role]++;
+    }
+  });
+
+  Object.keys(counts).forEach(role => {
+    const countEl = document.getElementById(`count-${role}`);
+    if (countEl) countEl.textContent = counts[role];
+  });
+}
+
 // --- Interactions ---
 
 // Tabs
@@ -377,7 +547,66 @@ if (btnAccelerated) {
       socket.emit('acceleratedRound');
     }
   });
-}// Admin: Leaderboard
+}
+
+// Role Filters Listener
+document.querySelectorAll('.filter-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    currentRoleFilter = chip.dataset.role;
+    renderPlayersList();
+  });
+});
+
+// Admin Modal Logic for Dynamic Stats Labels
+const pOverseasCheckbox = document.getElementById('p-overseas');
+const pIplExpCheckbox = document.getElementById('p-ipl-exp');
+const labelBat = document.getElementById('label-bat-stats');
+const labelBowl = document.getElementById('label-bowl-stats');
+const labelWk = document.getElementById('label-wk-stats');
+
+function updateModalLabels() {
+  const isOverseas = pOverseasCheckbox.checked;
+  const hasIplExp = pIplExpCheckbox.checked;
+  if (!labelBat || !labelBowl || !labelWk) return;
+  
+  if (hasIplExp) {
+    // Any player with IPL experience shows IPL labels
+    labelBat.textContent = "IPL Batting Statistics";
+    labelBowl.textContent = "IPL Bowling Statistics";
+    labelWk.textContent = "IPL Wicketkeeping Statistics";
+  } else if (isOverseas) {
+    // Overseas without IPL exp
+    labelBat.textContent = "International T20 Batting Records";
+    labelBowl.textContent = "International T20 Bowling Records";
+    labelWk.textContent = "International T20 Keeping Records";
+  } else {
+    // Domestic Indian player
+    labelBat.textContent = "Domestic T20 Stats (Syed Mushtaq Ali/Ranji)";
+    labelBowl.textContent = "Domestic T20 Stats (Vijay Hazare/Ranji)";
+    labelWk.textContent = "Domestic Wicketkeeping Stats";
+  }
+}
+
+if (pOverseasCheckbox) {
+  pOverseasCheckbox.addEventListener('change', updateModalLabels);
+}
+if (pIplExpCheckbox) {
+  pIplExpCheckbox.addEventListener('change', updateModalLabels);
+}
+
+// Admin: Undo Action
+const btnUndo = document.getElementById('btn-undo');
+if (btnUndo) {
+  btnUndo.addEventListener('click', () => {
+    if (confirm("Revert the last significant auction action? This will undo the last Sold/Unsold/Start action.")) {
+      socket.emit('undoAction');
+    }
+  });
+}
+
+// Admin: Leaderboard
 if (btnLeaderboard) {
   btnLeaderboard.addEventListener('click', () => {
     calculateAndShowLeaderboard();
@@ -472,12 +701,17 @@ window.editPlayer = function(playerId) {
   document.getElementById('p-name').value = p.name;
   document.getElementById('p-role').value = p.role;
   document.getElementById('p-baseprice').value = p.basePrice || 50;
+  document.getElementById('p-jersey').value = p.jerseyNumber || '';
   document.getElementById('p-overseas').checked = !!p.isOverseas;
+  document.getElementById('p-ipl-exp').checked = !!p.hasIplExp;
+  updateModalLabels(); // Set correct labels
   document.getElementById('p-img').value = p.img || '';
 
   const stats = p.stats || {};
   document.getElementById('p-runs').value = stats.runs || '';
   document.getElementById('p-matches').value = stats.matches || '';
+  document.getElementById('p-fours').value = stats.fours || '';
+  document.getElementById('p-sixes').value = stats.sixes || '';
   document.getElementById('p-average').value = stats.average || '';
   document.getElementById('p-strike-rate').value = stats.strikeRate || '';
   document.getElementById('p-hs').value = stats.hs || '';
@@ -494,7 +728,18 @@ window.editPlayer = function(playerId) {
   document.getElementById('p-stumpings').value = stats.stumpings || '';
 
   document.getElementById('modal-title').innerText = 'Edit Player';
+  document.getElementById('btn-delete-player-modal').classList.remove('hidden');
   playerModal.classList.remove('hidden');
+};
+
+// Admin: Delete Player
+window.deletePlayer = function(playerId) {
+  const p = appState.players.find(pl => pl.id === playerId);
+  if (!p) return;
+  
+  if (confirm(`Are you sure you want to delete ${p.name}? This action cannot be undone.`)) {
+    socket.emit('deletePlayer', { playerId });
+  }
 };
 
 // Admin Commands
@@ -533,11 +778,16 @@ btnNewPlayer.addEventListener('click', () => {
   document.getElementById('p-name').value = '';
   document.getElementById('p-role').value = 'Batter';
   document.getElementById('p-baseprice').value = '50';
+  document.getElementById('p-jersey').value = '';
   document.getElementById('p-overseas').checked = false;
+  document.getElementById('p-ipl-exp').checked = false;
+  updateModalLabels(); // Reset labels to Domestic by default
   document.getElementById('p-img').value = '';
 
   document.getElementById('p-runs').value = '';
   document.getElementById('p-matches').value = '';
+  document.getElementById('p-fours').value = '';
+  document.getElementById('p-sixes').value = '';
   document.getElementById('p-average').value = '';
   document.getElementById('p-strike-rate').value = '';
   document.getElementById('p-hs').value = '';
@@ -554,7 +804,16 @@ btnNewPlayer.addEventListener('click', () => {
   document.getElementById('p-stumpings').value = '';
 
   document.getElementById('modal-title').innerText = 'Add New Player';
+  document.getElementById('btn-delete-player-modal').classList.add('hidden');
   playerModal.classList.remove('hidden');
+});
+
+// Admin: Modal Delete Button
+document.getElementById('btn-delete-player-modal').addEventListener('click', () => {
+  const playerId = document.getElementById('p-id').value;
+  if (!playerId) return;
+  window.deletePlayer(playerId);
+  playerModal.classList.add('hidden');
 });
 
 closeBtn.addEventListener('click', () => {
@@ -567,12 +826,16 @@ playerForm.addEventListener('submit', (e) => {
   const name = document.getElementById('p-name').value;
   const role = document.getElementById('p-role').value;
   const basePrice = parseInt(document.getElementById('p-baseprice').value);
+  const jerseyNumber = document.getElementById('p-jersey').value;
   const isOverseas = document.getElementById('p-overseas').checked;
+  const hasIplExp = document.getElementById('p-ipl-exp').checked;
   const img = document.getElementById('p-img').value;
 
   const stats = {
     runs: document.getElementById('p-runs').value,
     matches: document.getElementById('p-matches').value,
+    fours: document.getElementById('p-fours').value,
+    sixes: document.getElementById('p-sixes').value,
     average: document.getElementById('p-average').value,
     strikeRate: document.getElementById('p-strike-rate').value,
     hs: document.getElementById('p-hs').value,
@@ -587,7 +850,7 @@ playerForm.addEventListener('submit', (e) => {
     stumpings: document.getElementById('p-stumpings').value
   };
 
-  socket.emit('updatePlayer', { id, name, role, basePrice, isOverseas, img, stats });
+  socket.emit('updatePlayer', { id, name, role, basePrice, jerseyNumber, isOverseas, hasIplExp, img, stats });
   playerModal.classList.add('hidden');
 });
 

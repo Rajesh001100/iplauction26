@@ -64,6 +64,9 @@
              <div class="admin-actions">
                <button id="btn-sold" class="btn-success">SOLD TO HIGHEST BIDDER</button>
                <button id="btn-unsold" class="btn-danger">MARK UNSOLD</button>
+               <button id="btn-undo" class="btn-undo">UNDO LAST ACTION</button>
+               <button onclick="socket.emit('addExtraTime', 30)" class="btn-secondary" style="font-size: 0.75rem;">+30 SEC</button>
+               <button onclick="socket.emit('addExtraTime', 60)" class="btn-secondary" style="font-size: 0.75rem;">+60 SEC</button>
              </div>
            </div>
 
@@ -98,6 +101,20 @@
           <button class="tab-btn" data-tab="unsold">Unsold</button>
         </div>
 
+        <div class="search-box">
+          <input type="text" id="player-search" placeholder="Search by player name...">
+        </div>
+
+        <div class="role-filters" id="role-filters">
+          <div class="filter-chip active" data-role="all">All <span class="role-count" id="count-all"></span></div>
+          <div class="filter-chip" data-role="Batter">Batters <span class="role-count" id="count-Batter"></span></div>
+          <div class="filter-chip" data-role="Bowler">Bowlers <span class="role-count" id="count-Bowler"></span></div>
+          <div class="filter-chip" data-role="All-rounder">All-rounders <span class="role-count" id="count-All-rounder"></span></div>
+          <div class="filter-chip" data-role="Wicketkeeper-Batsman">WK-Batsman <span class="role-count" id="count-Wicketkeeper-Batsman"></span></div>
+          <div class="filter-chip" data-role="Overseas">Overseas <span class="role-count" id="count-Overseas"></span></div>
+          <div class="filter-chip" data-role="Domestic">Domestic <span class="role-count" id="count-Domestic"></span></div>
+        </div>
+
         <div id="players-container" class="scroll-list">
           <!-- Rendered via JS -->
         </div>
@@ -128,21 +145,28 @@
           <option value="Batter">Batter</option>
           <option value="Bowler">Bowler</option>
           <option value="All-rounder">All-rounder</option>
-          <option value="Wicketkeeper">Wicketkeeper</option>
+          <option value="Wicketkeeper-Batsman">Wicketkeeper-Batsman</option>
         </select>
         <label>Base Price (₹ Cr/Lakhs)</label>
         <input type="number" id="p-baseprice" required>
         
-        <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+        <label>Jersey Number</label>
+        <input type="number" id="p-jersey" placeholder="e.g. 18">
+        
+        <div style="margin-bottom: 5px; display: flex; align-items: center; gap: 10px;">
           <input type="checkbox" id="p-overseas" style="width: auto; margin: 0;">
           <label for="p-overseas" style="margin: 0; color: white;">Overseas Player ✈️</label>
+        </div>
+        <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+          <input type="checkbox" id="p-ipl-exp" style="width: auto; margin: 0;">
+          <label for="p-ipl-exp" style="margin: 0; color: white;">Has IPL Experience? 🏏</label>
         </div>
 
         <label>Image URL (Optional)</label>
         <input type="text" id="p-img" placeholder="https://...">
         
         <hr style="border-color: rgba(192,192,192,0.1); margin-bottom: 15px;">
-        <label>Batting Statistics</label>
+        <label id="label-bat-stats">Batting Statistics (IPL/International)</label>
         <div class="stats-inputs" style="margin-bottom: 15px;">
           <div>
             <label>Runs</label>
@@ -168,9 +192,17 @@
             <label>50s/100s</label>
             <input type="text" id="p-fifties" placeholder="6/1">
           </div>
+          <div>
+            <label>4s</label>
+            <input type="number" id="p-fours" placeholder="150">
+          </div>
+          <div>
+            <label>6s</label>
+            <input type="number" id="p-sixes" placeholder="45">
+          </div>
         </div>
 
-        <label>Bowling Statistics</label>
+        <label id="label-bowl-stats">Bowling Statistics (IPL/International)</label>
         <div class="stats-inputs">
           <div>
             <label>Wickets</label>
@@ -198,7 +230,7 @@
           </div>
         </div>
 
-        <label>Wicketkeeping Statistics</label>
+        <label id="label-wk-stats">Wicketkeeping Statistics (IPL/International)</label>
         <div class="stats-inputs">
           <div>
             <label>Catches</label>
@@ -210,7 +242,10 @@
           </div>
         </div>
 
-        <button type="submit" class="btn-primary mt-3">Save Player</button>
+        <div style="display: flex; gap: 10px;">
+          <button type="submit" class="btn-primary mt-3">Save Player</button>
+          <button type="button" id="btn-delete-player-modal" class="btn-danger mt-3 hidden">Delete Player</button>
+        </div>
       </form>
     </div>
   </div>
