@@ -46,7 +46,7 @@ body {
   grid-template-areas: 
     "live live"
     "players teams";
-  grid-template-columns: 1.2fr 0.8fr;
+  grid-template-columns: 1fr 1fr;
   grid-template-rows: auto 1fr;
 }
 
@@ -145,8 +145,8 @@ button {
 }
 
 .is-admin .live-auction-area { grid-area: live; padding: 30px; box-shadow: 0 0 60px rgba(0,0,0,1); }
-.is-admin .players-list-area { grid-area: players; height: 600px; }
-.is-admin .teams-stats-area { grid-area: teams; height: 600px; }
+.is-admin .players-list-area { grid-area: players; }
+.is-admin .teams-stats-area { grid-area: teams; }
 
 .live-auction-area { 
   display: flex; 
@@ -346,6 +346,7 @@ button {
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  min-height: 70px; /* Ensure content doesn't squash */
 }
 .list-item:hover { 
   border-color: var(--primary); 
@@ -358,17 +359,17 @@ button {
 }
 
 /* Teams */
-.team-item { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
-.team-top { display: flex; justify-content: space-between; width: 100%; align-items: center;}
-.team-name { font-weight: 700; font-size: 1.1rem; color: #fff; }
-.team-budget { color: var(--primary); font-weight: 800; font-size: 1.2rem;}
-.team-stats { font-size: 0.85rem; color: var(--text-muted); }
+.team-item { display: flex; flex-direction: column; align-items: stretch; gap: 8px; width: 100%; padding: 4px 0; }
+.team-top { display: flex; justify-content: space-between; width: 100%; align-items: center; gap: 10px; }
+.team-name { font-weight: 700; font-size: 1.05rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.team-budget { color: var(--primary); font-weight: 800; font-size: 1.1rem; white-space: nowrap; }
+.team-stats { font-size: 0.8rem; color: var(--text-muted); opacity: 0.9; }
 
 /* Players List item */
-.p-list-left { display: flex; align-items: center; gap: 12px; position: relative;}
-.p-list-img-container { position: relative; width: 45px; height: 45px; }
+.p-list-left { display: flex; align-items: center; gap: 12px; position: relative; flex: 1; min-width: 0; }
+.p-list-img-container { position: relative; width: 50px; height: 50px; flex-shrink: 0; }
 .p-list-avatar { 
-  width: 54px; height: 54px; 
+  width: 50px; height: 50px; 
   border-radius: 50%; object-fit: cover; 
   border: 2px solid var(--primary); 
   image-rendering: -webkit-optimize-contrast;
@@ -402,11 +403,11 @@ button {
   border: 1px solid #000;
   z-index: 2;
 }
-.p-list-info { display:flex; flex-direction:column;}
-.p-list-name { font-weight: 700; color: #fff; }
-.p-list-role { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;}
-.p-list-right { text-align: right; }
-.p-list-price { color: var(--primary); font-weight: 800; }
+.p-list-info { display:flex; flex-direction:column; min-width: 0; flex: 1; }
+.p-list-name { font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95rem; }
+.p-list-role { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;}
+.p-list-right { text-align: right; flex-shrink: 0; margin-left: 10px; }
+.p-list-price { color: var(--primary); font-weight: 800; font-size: 1rem; }
 
 .tabs { display: flex; gap: 10px; margin-bottom: 10px; }
 .tab-btn { background: transparent; color: var(--text-muted); border-bottom: 2px solid transparent; border-radius: 0; padding: 8px 15px; font-weight: 600; text-transform: uppercase; font-size: 0.9rem; letter-spacing: 1px; }
