@@ -35,16 +35,18 @@ body {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 24px; padding: 30px 40px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px; 
+  padding: 20px;
   min-height: calc(100vh - 85px);
+  align-items: start;
 }
 
 .is-admin .dashboard-grid {
   grid-template-areas: 
     "live live"
     "players teams";
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.2fr 0.8fr;
   grid-template-rows: auto 1fr;
 }
 
@@ -143,23 +145,31 @@ button {
 }
 
 .is-admin .live-auction-area { grid-area: live; padding: 30px; box-shadow: 0 0 60px rgba(0,0,0,1); }
-.is-admin .players-list-area { grid-area: players; }
-.is-admin .teams-stats-area { grid-area: teams; }
+.is-admin .players-list-area { grid-area: players; height: 600px; }
+.is-admin .teams-stats-area { grid-area: teams; height: 600px; }
 
 .live-auction-area { 
   display: flex; 
   flex-direction: column; 
-  padding: 24px; 
+  padding: 20px; 
   background: rgba(10,10,10,0.6); 
   border: 1px solid var(--glass-border);
   box-shadow: 0 0 40px rgba(0,0,0,0.4);
   border-radius: 20px;
+  height: 100%;
+  min-height: 400px;
 }
 
-.empty-state { text-align: center; padding: 40px; color: var(--text-muted); flex: 1; display:flex; align-items: center; justify-content: center; }
-
-.players-list-area { grid-area: players; opacity: 0.85; filter: grayscale(0.2); }
-.teams-stats-area { grid-area: teams; opacity: 0.85; filter: grayscale(0.2); }
+.players-list-area { 
+  opacity: 0.95; 
+  height: 100%;
+  min-height: 600px;
+}
+.teams-stats-area { 
+  opacity: 0.95; 
+  height: 100%;
+  min-height: 600px;
+}
 
 .players-list-area:hover, .teams-stats-area:hover {
   opacity: 1;
@@ -546,10 +556,23 @@ button {
 }
 
 /* --- Mobile Responsiveness --- */
-@media (max-width: 1024px) {
+@media (max-width: 1280px) {
   .dashboard-grid {
     grid-template-columns: 1fr 1fr;
-    padding: 20px;
+  }
+  .teams-stats-area {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    padding: 15px;
+  }
+  .teams-stats-area, .players-list-area, .live-auction-area {
+    grid-column: span 1;
+    min-height: auto;
   }
 }
 
