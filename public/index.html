@@ -36,6 +36,8 @@
       </div>
       <div class="user-info">
         <span id="welcome-msg"></span>
+        <button id="btn-rules" class="btn-primary" style="margin-right: 10px; padding: 6px 15px; font-size: 0.85rem;">Rules</button>
+        <button id="btn-analytics" class="btn-primary hidden" style="margin-right: 10px; padding: 6px 15px; font-size: 0.85rem; background: linear-gradient(135deg, #00c6ff, #0072ff); border: none;">Analytics</button>
         <button id="logout-btn" class="btn-outline">Logout</button>
       </div>
     </header>
@@ -65,8 +67,15 @@
                <button id="btn-sold" class="btn-success">SOLD TO HIGHEST BIDDER</button>
                <button id="btn-unsold" class="btn-danger">MARK UNSOLD</button>
                <button id="btn-undo" class="btn-undo">UNDO LAST ACTION</button>
-               <button onclick="socket.emit('addExtraTime', 30)" class="btn-secondary" style="font-size: 0.75rem;">+30 SEC</button>
-               <button onclick="socket.emit('addExtraTime', 60)" class="btn-secondary" style="font-size: 0.75rem;">+60 SEC</button>
+               <div class="audio-toggle-wrapper">
+                  <label class="switch">
+                    <input type="checkbox" id="audio-toggle" checked>
+                    <span class="slider round"></span>
+                  </label>
+                  <span style="font-size: 0.75rem; color: white;">AI Voice</span>
+                </div>
+               <button onclick="socket.emit('addExtraTime', 5)" class="btn-secondary" style="font-size: 0.75rem;">+5 SEC</button>
+               <button onclick="socket.emit('addExtraTime', 10)" class="btn-secondary" style="font-size: 0.75rem;">+10 SEC</button>
              </div>
            </div>
 
@@ -91,6 +100,7 @@
             <button id="btn-leaderboard" class="btn-primary" style="margin-right: 10px; background: linear-gradient(135deg, #FFD700, #DAA520); color: black;">Show Leaderboard</button>
             <button id="btn-reset-bids" class="btn-warning">Reset Bids</button>
             <button id="btn-accelerated" class="btn-outline">Accelerated Round</button>
+            <button id="btn-passwords" class="btn-outline" style="background: rgba(255,255,255,0.05); color: #fff; border-color: rgba(255,255,255,0.2);">Manage Passwords</button>
             <button id="btn-new-player" class="btn-secondary">Add Player</button>
           </div>
         </div>
@@ -288,6 +298,105 @@
       <h2 style="text-align: center; color: var(--primary); margin-bottom: 20px;">🏆 AUCTION LEADERBOARD 🏆</h2>
       <div id="leaderboard-container" class="scroll-list" style="max-height: 500px;">
         <!-- Leaderboard items will be injected here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for Rules -->
+  <div id="rules-modal" class="modal hidden">
+    <div class="modal-content glass-panel" style="width: 700px; max-width: 95vw;">
+      <span class="close-rules-btn close-btn">&times;</span>
+      <h2 style="text-align: center; color: var(--primary); margin-bottom: 20px;">📜 AUCTION RULES & GUIDELINES</h2>
+      
+      <div class="rules-scroll scroll-list" style="max-height: 70vh;">
+        <div class="rule-section">
+          <h3 style="color: var(--primary); margin-bottom: 10px;">1. Squad Requirements</h3>
+          <ul style="list-style: none; padding-left: 0; color: var(--text-main);">
+            <li>✅ <strong>Minimum Squad:</strong> 18 players (Penalty: <span style="color: var(--danger);">-50 pts</span> if below)</li>
+            <li>✅ <strong>Maximum Squad:</strong> 25 players per franchise</li>
+            <li>✅ <strong>Overseas Limit:</strong> Max 8 international players</li>
+          </ul>
+        </div>
+
+        <div class="rule-section" style="margin-top: 20px;">
+          <h3 style="color: var(--primary); margin-bottom: 10px;">2. Ideal Composition (Scoring Bonus)</h3>
+          <p style="font-size: 0.9rem; margin-bottom: 5px;">Build a balanced squad to earn maximum points:</p>
+          <ul style="list-style: none; padding-left: 0; color: var(--text-main);">
+            <li>🏏 <strong>6+ Batters:</strong> <span style="background: var(--success); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 0.75rem;">+15 PTS</span></li>
+            <li>🏐 <strong>6+ Bowlers:</strong> <span style="background: var(--success); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 0.75rem;">+15 PTS</span></li>
+            <li>⚡ <strong>3+ All-Rounders:</strong> <span style="background: var(--success); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 0.75rem;">+15 PTS</span></li>
+            <li>🧤 <strong>2+ Wicketkeepers:</strong> <span style="background: var(--success); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 0.75rem;">+15 PTS</span></li>
+            <li>🏆 <strong>Complete Squad Bonus:</strong> <span style="background: var(--primary); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 0.75rem;">+25 PTS</span></li>
+          </ul>
+        </div>
+
+        <div class="rule-section" style="margin-top: 20px;">
+          <h3 style="color: var(--primary); margin-bottom: 10px;">3. Bidding Rules</h3>
+          <ul style="list-style: none; padding-left: 0; color: var(--text-main);">
+            <li>💰 <strong>Starting Budget:</strong> ₹10,000 Lakhs (₹100 Crore).</li>
+            <li>⏱️ <strong>Timer:</strong> 15 seconds. Resets on every new bid.</li>
+            <li>⚖️ <strong>Bid Increments:</strong> Use provided buttons (+10, +20, etc.).</li>
+            <li>🚫 <strong>Elimination:</strong> Auctioneer can eliminate teams for misconduct.</li>
+          </ul>
+        </div>
+
+        <div class="rule-section" style="margin-top: 20px;">
+          <h3 style="color: var(--primary); margin-bottom: 10px;">4. Leaderboard Scoring</h3>
+          <ul style="list-style: none; padding-left: 0; color: var(--text-main);">
+            <li>⭐ <strong>Star Power:</strong> 1 point for every ₹10L spent on players.</li>
+            <li>📏 <strong>Squad Size:</strong> 2 points for every player in your squad.</li>
+            <li>📉 <strong>Balance:</strong> Sum of your Composition points (+/-).</li>
+            <li>⚠️ <strong>Major Penalty:</strong> <span style="color: var(--danger);">-50 pts</span> for size < 18.</li>
+            <li style="margin-top: 10px; padding: 10px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border-left: 4px solid var(--danger); font-size: 0.85rem;">
+              ℹ️ <strong>Why -90 PTS initially?</strong><br>Teams start with -50 (Below 18 players) + -40 (Penalty for missing all 4 role requirements) = <strong>-90 Points.</strong> Start bidding to earn points!
+            </li>
+          </ul>
+        </div>
+
+        <div class="rule-section" style="margin-top: 20px; border: 1px dashed var(--primary); background: rgba(212, 175, 55, 0.05);">
+          <h3 style="color: var(--primary); margin-bottom: 10px;">💡 Example Calculation</h3>
+          <div style="font-size: 0.85rem; line-height: 1.6;">
+            <strong>Scenario:</strong> 18 players, ₹2,000L total spent, All role requirements met.<br>
+            • <strong>Star Power:</strong> 20 pts (2000 spent / 100)<br>
+            • <strong>Squad Size:</strong> 36 pts (18 players × 2)<br>
+            • <strong>Composition:</strong> +60 pts (all roles met)<br>
+            • <strong>Bonus:</strong> <span style="color: var(--primary); font-weight: 700;">+25 pts</span> (Complete Squad Bonus)<br>
+            • <strong>TOTAL RATING:</strong> 20 + 36 + 60 + 25 = <span style="color: var(--primary); font-weight: 800; font-size: 1rem;">141.0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for Analytics -->
+  <div id="analytics-modal" class="modal hidden">
+    <div class="modal-content glass-panel" style="width: 800px; max-width: 95vw;">
+      <span class="close-analytics-btn close-btn">&times;</span>
+      <h2 style="text-align: center; color: #00c6ff; margin-bottom: 20px;">📊 AUCTION ANALYTICS INSIGHTS 📊</h2>
+      <div id="analytics-container" class="analytics-grid">
+         <!-- Analytics cards injected via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for Password Management (Admin Only) -->
+  <div id="password-modal" class="modal hidden">
+    <div class="modal-content glass-panel" style="width: 600px; max-width: 95vw;">
+      <span class="close-password-btn close-btn">&times;</span>
+      <h2 style="text-align: center; color: var(--primary); margin-bottom: 20px;">🔑 TEAM PASSWORD MANAGEMENT</h2>
+      
+      <!-- Password Verification Section -->
+      <div id="password-verify-section" style="text-align: center; padding: 20px;">
+        <p style="color: var(--text-muted); margin-bottom: 20px;">Enter Auctioneer Password to continue</p>
+        <div style="display: flex; flex-direction: column; gap: 15px; align-items: center;">
+          <input type="password" id="admin-verify-password" placeholder="Auctioneer Password" 
+            style="background:rgba(255,255,255,0.05); color:white; border:1px solid rgba(255,255,255,0.1); padding:12px; border-radius:8px; width: 100%; max-width: 300px; text-align: center;">
+          <button id="btn-verify-admin" class="btn-primary" style="padding: 10px 30px;">AUTHORIZE ACCESS</button>
+        </div>
+      </div>
+
+      <div id="password-list-container" class="scroll-list hidden" style="max-height: 400px;">
+        <!-- Password rows injected via JS -->
       </div>
     </div>
   </div>

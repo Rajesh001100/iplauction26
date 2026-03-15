@@ -35,9 +35,28 @@ let appState = {
 let currentTab = 'upcoming';
 let currentRoleFilter = 'all';
 let searchQuery = '';
+let isAudioEnabled = true;
 
 // Audio Effects
 const soldSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3'); // Celebration/Tada sound
+
+// AI Auctioneer Voice
+function speak(text) {
+  if (!isAudioEnabled) return; 
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel(); // Stop any pending speech
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    
+    // Pick a good voice if available
+    const voices = window.speechSynthesis.getVoices();
+    const premiumVoice = voices.find(v => v.name.includes('Google') || v.name.includes('Premium') || v.name.includes('Male'));
+    if (premiumVoice) utterance.voice = premiumVoice;
+    
+    window.speechSynthesis.speak(utterance);
+  }
+}
 
 function formatMoney(lakhs) {
   if (lakhs >= 100) {
@@ -90,6 +109,24 @@ const leaderboardModal = document.getElementById('leaderboard-modal');
 const leaderboardContainer = document.getElementById('leaderboard-container');
 const closeLeaderboardBtn = document.querySelector('.close-leaderboard-btn');
 const btnLeaderboard = document.getElementById('btn-leaderboard');
+const btnRules = document.getElementById('btn-rules');
+const rulesModal = document.getElementById('rules-modal');
+const closeRulesBtn = document.querySelector('.close-rules-btn');
+
+const btnAnalytics = document.getElementById('btn-analytics');
+const analyticsModal = document.getElementById('analytics-modal');
+const analyticsContainer = document.getElementById('analytics-container');
+const closeAnalyticsBtn = document.querySelector('.close-analytics-btn');
+
+const btnPasswords = document.getElementById('btn-passwords');
+const passwordModal = document.getElementById('password-modal');
+const passwordListContainer = document.getElementById('password-list-container');
+const closePasswordBtn = document.querySelector('.close-password-btn');
+const passwordVerifySection = document.getElementById('password-verify-section');
+const adminVerifyPasswordInput = document.getElementById('admin-verify-password');
+const btnVerifyAdmin = document.getElementById('btn-verify-admin');
+
+let adminTeamsList = []; // Full team data with passwords (admin only)
 
 // --- Initialization ---
 
@@ -105,8 +142,28 @@ socket.on('initialState', (state) => {
   }
 });
 
+socket.on('adminTeamData', ({ teams }) => {
+  // Always accept team data if sent by server (server should guard access)
+  adminTeamsList = teams;
+  if (passwordModal && !passwordModal.classList.contains('hidden')) {
+    renderPasswordManager();
+  }
+});
+
 socket.on('stateUpdate', (partialState) => {
+  const oldBid = appState.globalState?.currentBid || 0;
+  const oldBidderId = appState.globalState?.currentBidderId;
+
   appState = { ...appState, ...partialState };
+  
+  // Voice announcement for new bids
+  if (appState.globalState.currentBid > oldBid && appState.globalState.currentBidderId !== oldBidderId) {
+    const bidder = appState.teams.find(t => t.id === appState.globalState.currentBidderId);
+    if (bidder) {
+      speak(`${bidder.name} bids ${formatMoney(appState.globalState.currentBid)}`);
+    }
+  }
+
   if (appState.globalState && appState.globalState.timerEndTime) {
     startClientTimer(appState.globalState.timerEndTime);
   } else if (appState.globalState && !appState.globalState.timerEndTime) {
@@ -123,6 +180,7 @@ socket.on('auctionError', (msg) => {
 
 socket.on('playerSold', (data) => {
   soldSound.play().catch(e => console.log("Sound play failed", e));
+  speak(`${data.player.name} is SOLD to ${data.team.name} for ${formatMoney(data.price)}!`);
   showSoldAnimation(data);
 });
 
@@ -260,6 +318,13 @@ if (playerSearchInput) {
   });
 }
 
+const audioToggle = document.getElementById('audio-toggle');
+if (audioToggle) {
+  audioToggle.addEventListener('change', (e) => {
+    isAudioEnabled = e.target.checked;
+  });
+}
+
 logoutBtn.addEventListener('click', () => {
   currentUser = null;
   mainApp.classList.add('hidden');
@@ -274,6 +339,14 @@ function renderApp() {
   renderLiveAuction();
   renderPlayersList();
   renderTeamsStats();
+
+  // Show analytics button if any player is sold (Admin ONLY)
+  const soldPlayers = appState.players.filter(p => p.status === 'sold');
+  if (soldPlayers.length > 0 && currentUser?.role === 'admin') {
+    btnAnalytics?.classList.remove('hidden');
+  } else {
+    btnAnalytics?.classList.add('hidden');
+  }
 
   // Admin visibility toggles
   if (currentUser.role === 'admin') {
@@ -384,6 +457,16 @@ function renderLiveAuction() {
   if (teamControlsDisplay) {
     teamControlsDisplay.style.opacity = '1';
     teamControlsDisplay.style.pointerEvents = 'auto';
+    
+    // Use fixed increments
+    const bidBtns = document.querySelectorAll('.btn-bid');
+    const fixedIncrements = [10, 20, 50, 100];
+    
+    bidBtns.forEach((btn, idx) => {
+      const inc = fixedIncrements[idx];
+      btn.dataset.amount = inc;
+      btn.textContent = `+ ${formatMoney(inc)}`;
+    });
   }
   document.querySelectorAll('.btn-bid').forEach(btn => btn.disabled = false);
 }
@@ -479,7 +562,8 @@ function renderTeamsStats() {
     }).length;
 
     html += `
-      <div class="list-item" style="${isMe ? 'border-color: var(--primary); background: rgba(59,130,246,0.1);' : ''}">
+      <div class="list-item ${t.isEliminated ? 'is-eliminated' : ''}" style="${isMe ? 'border-color: var(--primary); background: rgba(59,130,246,0.1);' : ''}">
+         ${t.isEliminated ? '<div class="eliminated-badge">ELIMINATED</div>' : ''}
          <div class="team-item w-100" style="width: 100%;">
             <div class="team-top" style="display: flex; align-items: center; justify-content: space-between;">
                <div style="display: flex; align-items: center; gap: 10px;">
@@ -493,10 +577,16 @@ function renderTeamsStats() {
                Roster: ${t.players.length}/25 | 
                Overseas: ${overseasCount}/8
             </div>
-            ${(currentUser.role === 'admin' || isMe) ? 
-              `<button class="btn-outline btn-view-squad" onclick="viewSquad('${t.id}')">View Squad</button>` : 
-              ''
-            }
+            <div style="display:flex; gap:10px; align-self:flex-end;">
+               ${(currentUser.role === 'admin' || isMe) ? 
+                 `<button class="btn-outline btn-view-squad" onclick="viewSquad('${t.id}')">View Squad</button>` : 
+                 ''
+               }
+               ${(currentUser.role === 'admin') ? 
+                 `<button class="btn-danger" style="font-size:0.7rem; padding: 4px 8px; margin-top:10px;" onclick="toggleEliminate('${t.id}')">${t.isEliminated ? 'Restore' : 'Eliminate'}</button>` : 
+                 ''
+               }
+            </div>
          </div>
       </div>
     `;
@@ -625,6 +715,15 @@ if (btnUndo) {
   });
 }
 
+window.toggleEliminate = function(teamId) {
+  const team = appState.teams.find(t => t.id === teamId);
+  if (!team) return;
+  const action = team.isEliminated ? 'restore' : 'eliminate';
+  if (confirm(`Are you sure you want to ${action} ${team.name}?`)) {
+    socket.emit('toggleEliminateTeam', { teamId });
+  }
+};
+
 // Admin: Leaderboard
 if (btnLeaderboard) {
   btnLeaderboard.addEventListener('click', () => {
@@ -656,11 +755,25 @@ function calculateAndShowLeaderboard() {
       if (role.includes('keeper')) counts.Wicketkeeper++;
     });
 
-    // Award bonus points for reaching minimum balance
-    if (counts.Batter >= 5) balancePoints += 10;
-    if (counts.Bowler >= 5) balancePoints += 10;
-    if (counts.AllRounder >= 2) balancePoints += 10;
-    if (counts.Wicketkeeper >= 1) balancePoints += 10;
+    // Award bonus points for reaching minimum balance (New Rules: 6/6/3/2)
+    const REQS = { Batter: 6, Bowler: 6, AllRounder: 3, Wicketkeeper: 2 };
+    let metAll = true;
+    
+    Object.keys(REQS).forEach(role => {
+      if (counts[role] >= REQS[role]) {
+        balancePoints += 15; // Increased bonus for meeting minimum
+      } else {
+        metAll = false;
+        balancePoints -= 10; // Penalty for not meeting minimum
+      }
+    });
+
+    if (squad.length < 18) {
+      balancePoints -= 50; // Heavy penalty for less than 18 players
+      metAll = false;
+    }
+
+    if (metAll) balancePoints += 25; // "Complete Squad" bonus
 
     // 3. Roster Size
     const rosterPoints = squad.length * 2;
@@ -701,6 +814,154 @@ function calculateAndShowLeaderboard() {
 closeLeaderboardBtn.addEventListener('click', () => {
     leaderboardModal.classList.add('hidden');
 });
+
+// --- Analytics Dashboard ---
+
+if (btnAnalytics) {
+  btnAnalytics.addEventListener('click', showAnalytics);
+}
+
+closeAnalyticsBtn.addEventListener('click', () => {
+  analyticsModal.classList.add('hidden');
+});
+
+function showAnalytics() {
+  const soldPlayers = appState.players.filter(p => p.status === 'sold');
+  if (soldPlayers.length === 0) return;
+
+  // 1. Best Value Buy (Lowest difference between Final and Base price)
+  const bestValue = soldPlayers.reduce((prev, curr) => {
+    const prevDiff = (prev.finalPrice || 0) - (prev.basePrice || 0);
+    const currDiff = (curr.finalPrice || 0) - (curr.basePrice || 0);
+    return prevDiff < currDiff ? prev : curr;
+  }, soldPlayers[0]);
+
+  // 2. Most Balanced Squad (From Leaderboard logic)
+  const teamsData = appState.teams.map(team => {
+    const squad = appState.players.filter(p => p.team === team.id);
+    const counts = { Batter: 0, Bowler: 0, AllRounder: 0, Wicketkeeper: 0 };
+    squad.forEach(p => {
+      const role = p.role.replace('-', '').replace(' ', '');
+      if (role.includes('Batter')) counts.Batter++;
+      if (role.includes('Bowler')) counts.Bowler++;
+      if (role.includes('All')) counts.AllRounder++;
+      if (role.includes('keeper')) counts.Wicketkeeper++;
+    });
+    const REQS = { Batter: 6, Bowler: 6, AllRounder: 3, Wicketkeeper: 2 };
+    let metCount = 0;
+    Object.keys(REQS).forEach(role => { if (counts[role] >= REQS[role]) metCount++; });
+    return { ...team, metCount, squadSize: squad.length };
+  });
+  const mostBalanced = teamsData.reduce((prev, curr) => (prev.metCount > curr.metCount ? prev : curr), teamsData[0]);
+
+  // 3. Budget Efficiency (Total Squad Rating / Total Spent)
+  const efficientTeam = teamsData.map(t => {
+      const STARTING_BUDGET = 10000;
+      const spent = STARTING_BUDGET - t.budget;
+      // We can take totalScore if we recalculate it here, OR just spend/squadSize ratio for simplicity
+      const efficiency = t.squadSize / (spent || 1); 
+      return { ...t, efficiency };
+  }).reduce((prev, curr) => (prev.efficiency > curr.efficiency ? prev : curr), teamsData[0]);
+
+  analyticsContainer.innerHTML = `
+    <div class="analytics-card">
+      <span class="analytics-icon">💎</span>
+      <h3>Best Value Buy</h3>
+      <div class="value">${bestValue.name}</div>
+      <div class="sub-value">Sold for ${formatMoney(bestValue.finalPrice)} (Base: ${formatMoney(bestValue.basePrice)})</div>
+    </div>
+    <div class="analytics-card">
+      <span class="analytics-icon">⚖️</span>
+      <h3>Most Balanced Squad</h3>
+      <div class="value">${mostBalanced.name}</div>
+      <div class="sub-value">Met ${mostBalanced.metCount}/4 composition requirements</div>
+    </div>
+    <div class="analytics-card">
+      <span class="analytics-icon">📈</span>
+      <h3>Budget Efficiency</h3>
+      <div class="value">${efficientTeam.name}</div>
+      <div class="sub-value">Highest player-to-spend ratio in the auction</div>
+    </div>
+  `;
+
+  analyticsModal.classList.remove('hidden');
+}
+
+// --- Team Password Management ---
+
+if (btnPasswords) {
+  btnPasswords.addEventListener('click', () => {
+    // Reset modal state
+    passwordVerifySection.classList.remove('hidden');
+    passwordListContainer.classList.add('hidden');
+    adminVerifyPasswordInput.value = '';
+    passwordModal.classList.remove('hidden');
+  });
+}
+
+if (btnVerifyAdmin) {
+  btnVerifyAdmin.addEventListener('click', () => {
+    const enteredPass = adminVerifyPasswordInput.value;
+    const adminPass = appState.globalState.adminPassword || 'admin123'; // Fallback matching server.js
+
+    if (enteredPass === adminPass) {
+      passwordVerifySection.classList.add('hidden');
+      passwordListContainer.classList.remove('hidden');
+      socket.emit('requestAdminTeamData');
+      renderPasswordManager();
+    } else {
+      alert("Invalid Auctioneer Password! Access Denied.");
+    }
+  });
+}
+
+if (adminVerifyPasswordInput) {
+  adminVerifyPasswordInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      btnVerifyAdmin.click();
+    }
+  });
+}
+
+closePasswordBtn.addEventListener('click', () => {
+  passwordModal.classList.add('hidden');
+});
+
+function renderPasswordManager() {
+  if (!passwordListContainer) return;
+  passwordListContainer.innerHTML = '';
+  
+  if (adminTeamsList.length === 0) {
+    passwordListContainer.innerHTML = '<div class="text-muted">Loading team passwords...</div>';
+    return;
+  }
+
+  adminTeamsList.forEach(team => {
+    passwordListContainer.innerHTML += `
+      <div class="list-item" style="display:flex; align-items:center; justify-content:space-between; gap:20px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <img src="${team.logo || ''}" style="width:30px; height:30px; object-fit:contain;">
+          <span style="font-weight:700;">${team.name}</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <input type="text" id="pass-${team.id}" value="${team.password}" 
+            style="background:rgba(255,255,255,0.05); color:white; border:1px solid rgba(255,255,255,0.1); padding:8px; border-radius:6px; font-family:monospace; width:120px;">
+          <button class="btn-primary" style="padding:8px 15px; font-size:0.75rem;" onclick="saveNewPassword('${team.id}')">Update</button>
+        </div>
+      </div>
+    `;
+  });
+}
+
+window.saveNewPassword = function(teamId) {
+  const newPass = document.getElementById(`pass-${teamId}`).value;
+  if (!newPass) return alert("Password cannot be empty!");
+  
+  const team = adminTeamsList.find(t => t.id === teamId);
+  if (confirm(`Update password for ${team.name} to "${newPass}"?`)) {
+    socket.emit('updateTeamPassword', { teamId, newPassword: newPass });
+  }
+};
 
 // Admin: Reset Biddings Only
 const btnResetBids = document.getElementById('btn-reset-bids');
@@ -768,6 +1029,27 @@ document.getElementById('btn-sold').addEventListener('click', () => {
     return;
   }
   socket.emit('markSold');
+});
+
+// Rules Modal Listeners
+if (btnRules) {
+  btnRules.addEventListener('click', () => {
+    rulesModal.classList.remove('hidden');
+  });
+}
+
+if (closeRulesBtn) {
+  closeRulesBtn.addEventListener('click', () => {
+    rulesModal.classList.add('hidden');
+  });
+}
+
+// Close modals on outside click
+window.addEventListener('click', (e) => {
+  if (e.target === playerModal) playerModal.classList.add('hidden');
+  if (e.target === squadModal) squadModal.classList.add('hidden');
+  if (e.target === leaderboardModal) leaderboardModal.classList.add('hidden');
+  if (e.target === rulesModal) rulesModal.classList.add('hidden');
 });
 
 document.getElementById('btn-unsold').addEventListener('click', () => {
@@ -874,6 +1156,7 @@ playerForm.addEventListener('submit', (e) => {
 });
 
 // --- Squad Logic ---
+// --- Squad Logic ---
 window.viewSquad = function(teamId) {
   const team = appState.teams.find(t => t.id === teamId);
   if (!team) return;
@@ -881,35 +1164,64 @@ window.viewSquad = function(teamId) {
   squadTitle.innerText = `${team.name} - Squad`;
   
   const squadPlayers = appState.players.filter(p => p.team === teamId);
+  const counts = { Batter: 0, Bowler: 0, 'All-rounder': 0, 'Wicketkeeper-Batsman': 0, 'Wicketkeeper': 0 };
+  squadPlayers.forEach(p => {
+    if (counts[p.role] !== undefined) counts[p.role]++;
+  });
+  
+  // Wicketkeeper normalization
+  const wkTotal = counts['Wicketkeeper-Batsman'] + counts['Wicketkeeper'];
+  const arTotal = counts['All-rounder'];
+
   const overseasCount = squadPlayers.filter(p => p.isOverseas).length;
   const STARTING_BUDGET = 10000;
   const spent = STARTING_BUDGET - team.budget;
 
+  // Requirements Helper
+  const getReqHtml = (label, current, required) => {
+    const isComplete = current >= required;
+    const pct = Math.min(100, (current / required) * 100);
+    return `
+      <div class="requirement-item">
+        <div class="req-header">
+          <span>${label} (${required} Min)</span>
+          <span style="color: ${isComplete ? 'var(--success)' : 'var(--primary)'}">${current}/${required} ${isComplete ? '✅' : ''}</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill ${isComplete ? 'complete' : ''}" style="width: ${pct}%"></div>
+        </div>
+      </div>
+    `;
+  };
+
   squadSummary.innerHTML = `
     <div class="summary-item">
-      <span class="summary-val">${squadPlayers.length}/25</span>
-      <span class="summary-lbl">Roster</span>
+      <span class="summary-val" style="color: ${squadPlayers.length >= 18 ? 'var(--success)' : 'var(--danger)'}">${squadPlayers.length}/25</span>
+      <span class="summary-lbl">Roster (Min 18)</span>
     </div>
     <div class="summary-item">
-      <span class="summary-val">${overseasCount}/8</span>
+      <span class="summary-val" style="color: ${overseasCount <= 8 ? 'var(--primary)' : 'var(--danger)'}">${overseasCount}/8</span>
       <span class="summary-lbl">Overseas</span>
-    </div>
-    <div class="summary-item">
-      <span class="summary-val">${formatMoney(spent)}</span>
-      <span class="summary-lbl">Spent</span>
-    </div>
-    <div class="summary-item">
-      <span class="summary-val">${formatMoney(team.budget)}</span>
-      <span class="summary-lbl">Remaining</span>
     </div>
   `;
 
-  squadPlayersList.innerHTML = '';
+  const requirementsHtml = `
+    <div class="requirements-container">
+      <h3 style="font-size: 0.9rem; margin-bottom: 15px; color: var(--primary); text-transform: uppercase;">Squad Composition</h3>
+      ${getReqHtml('Batters', counts.Batter, 6)}
+      ${getReqHtml('Bowlers', counts.Bowler, 6)}
+      ${getReqHtml('All-rounders', arTotal, 3)}
+      ${getReqHtml('Wicket-keepers', wkTotal, 2)}
+    </div>
+  `;
+
+  squadPlayersList.innerHTML = requirementsHtml;
+  
   if (squadPlayers.length === 0) {
-    squadPlayersList.innerHTML = '<div class="text-muted" style="padding:20px;text-align:center;">No players bought yet.</div>';
+    squadPlayersList.innerHTML += '<div class="text-muted" style="padding:20px;text-align:center;">No players bought yet.</div>';
   } else {
     squadPlayers.forEach(p => {
-      const img = p.img || 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=100&auto=format&fit=crop&q=60';
+      const img = p.img || 'https://images2.imgbox.com/6c/d2/8I1zS2mY_o.png';
       squadPlayersList.innerHTML += `
         <div class="list-item">
           <div class="p-list-left">

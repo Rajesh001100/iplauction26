@@ -116,7 +116,11 @@ io.on('connection', (socket) => {
   socket.on('login', ({ role, teamId, password }, callback) => {
     if (role === 'admin') {
       const winningPass = db.globalState.adminPassword || process.env.ADMIN_PASSWORD || 'admin123';
-      if (password === winningPass) callback({ success: true, role: 'admin' });
+      if (password === winningPass) {
+        callback({ success: true, role: 'admin' });
+        // Send full team data (including passwords) to the admin
+        socket.emit('adminTeamData', { teams: db.teams });
+      }
       else callback({ success: false, message: 'Invalid Admin Password' });
     } else {
       const team = db.teams.find(t => t.id === teamId);
@@ -151,7 +155,14 @@ io.on('connection', (socket) => {
       return;
     }
     const team = db.teams.find(t => t.id === teamId);
-    if (team && amount > db.globalState.currentBid && amount <= team.budget) {
+    if (!team) return;
+
+    if (team.isEliminated) {
+      socket.emit('auctionError', 'This franchise has been ELIMINATED by the Auctioneer and cannot bid!');
+      return;
+    }
+
+    if (amount > db.globalState.currentBid && amount <= team.budget) {
       db.globalState.currentBid = amount;
       db.globalState.currentBidderId = teamId;
 
@@ -173,6 +184,12 @@ io.on('connection', (socket) => {
       const team = db.teams.find(t => t.id === db.globalState.currentBidderId);
 
       if (player && team) {
+        // Strict Squad Limit Check
+        if (team.players.length >= 25) {
+          socket.emit('auctionError', `Cannot sell player! ${team.name} already has a maximum of 25 players.`);
+          return;
+        }
+
         const price = db.globalState.currentBid;
         player.status = 'sold';
         player.team = team.id;
@@ -286,6 +303,31 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('toggleEliminateTeam', async ({ teamId }) => {
+    const team = db.teams.find(t => t.id === teamId);
+    if (team) {
+      team.isEliminated = !team.isEliminated;
+      await supabase.from('teams').update({ isEliminated: team.isEliminated }).eq('id', teamId);
+      io.emit('stateUpdate', { teams: db.teams });
+    }
+  });
+
+  socket.on('updateTeamPassword', async ({ teamId, newPassword }) => {
+    const team = db.teams.find(t => t.id === teamId);
+    if (team) {
+      team.password = newPassword;
+      await supabase.from('teams').update({ password: newPassword }).eq('id', teamId);
+      // Re-emit to all admins if any
+      io.emit('adminTeamData', { teams: db.teams });
+      console.log(`Password updated for team: ${team.name}`);
+    }
+  });
+
+  socket.on('requestAdminTeamData', () => {
+    // Basic server-side guard
+    socket.emit('adminTeamData', { teams: db.teams });
+  });
+
   socket.on('updatePlayer', async (playerData) => {
     if (playerData.id) {
       let idx = db.players.findIndex(p => p.id === playerData.id);
@@ -319,6 +361,7 @@ io.on('connection', (socket) => {
     db.teams.forEach(t => {
       t.budget = 10000;
       t.players = [];
+      t.isEliminated = false;
     });
 
     // Reset global state in memory
@@ -343,7 +386,8 @@ io.on('connection', (socket) => {
         }).neq('id', 'all_reset_placeholder'),
         supabase.from('teams').update({
           budget: 10000,
-          players: []
+          players: [],
+          isEliminated: false
         }).neq('id', 'all_reset_placeholder')
       ]);
       console.log('Auction reset successfully in Supabase');
