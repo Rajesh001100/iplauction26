@@ -133,6 +133,10 @@ let adminTeamsList = []; // Full team data with passwords (admin only)
 // Wait for initial state to populate login dropdown
 socket.on('initialState', (state) => {
   appState = state;
+  if (state.globalState && state.globalState.isAudioEnabled !== undefined) {
+    isAudioEnabled = state.globalState.isAudioEnabled;
+    if (audioToggle) audioToggle.checked = isAudioEnabled;
+  }
   populateLoginDropdown();
   if (appState.globalState && appState.globalState.timerEndTime) {
     startClientTimer(appState.globalState.timerEndTime);
@@ -156,6 +160,11 @@ socket.on('stateUpdate', (partialState) => {
 
   appState = { ...appState, ...partialState };
   
+  if (partialState.globalState && partialState.globalState.isAudioEnabled !== undefined) {
+    isAudioEnabled = partialState.globalState.isAudioEnabled;
+    if (audioToggle) audioToggle.checked = isAudioEnabled;
+  }
+
   // Voice announcement for new bids
   if (appState.globalState.currentBid > oldBid && appState.globalState.currentBidderId !== oldBidderId) {
     const bidder = appState.teams.find(t => t.id === appState.globalState.currentBidderId);
@@ -321,7 +330,14 @@ if (playerSearchInput) {
 const audioToggle = document.getElementById('audio-toggle');
 if (audioToggle) {
   audioToggle.addEventListener('change', (e) => {
-    isAudioEnabled = e.target.checked;
+    if (currentUser?.role !== 'admin') { // Only allow admin to change this
+      // Revert if somehow triggered by non-admin (UI should hide it anyway)
+      audioToggle.checked = isAudioEnabled;
+      return;
+    }
+    const isEnabled = e.target.checked;
+    isAudioEnabled = isEnabled; // Local update for snappiness
+    socket.emit('toggleAudio', { isEnabled });
   });
 }
 
@@ -349,14 +365,17 @@ function renderApp() {
   }
 
   // Admin visibility toggles
+  const adminAudioControl = document.getElementById('admin-audio-control');
   if (currentUser.role === 'admin') {
     adminAddPlayer.classList.remove('hidden');
     adminControls.classList.remove('hidden');
     teamControls.classList.add('hidden');
+    if (adminAudioControl) adminAudioControl.classList.remove('hidden');
   } else {
     adminAddPlayer.classList.add('hidden');
     adminControls.classList.add('hidden');
     teamControls.classList.remove('hidden');
+    if (adminAudioControl) adminAudioControl.classList.add('hidden');
   }
 }
 

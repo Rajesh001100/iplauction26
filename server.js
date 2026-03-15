@@ -30,7 +30,8 @@ let db = {
     currentBid: 0,
     currentBidderId: null,
     timer: 15, // Default 15s
-    isTimerRunning: false
+    isTimerRunning: false,
+    isAudioEnabled: true
   }
 };
 
@@ -275,6 +276,12 @@ io.on('connection', (socket) => {
         });
       }
     }
+  });
+
+  socket.on('toggleAudio', ({ isEnabled }) => {
+    db.globalState.isAudioEnabled = isEnabled;
+    io.emit('stateUpdate', { globalState: db.globalState });
+    console.log(`Global AI Voice: ${isEnabled ? 'ENABLED' : 'DISABLED'}`);
   });
 
   socket.on('deletePlayer', async ({ playerId }) => {
