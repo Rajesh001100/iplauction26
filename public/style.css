@@ -148,6 +148,25 @@ button {
 .is-admin .players-list-area { grid-area: players; }
 .is-admin .teams-stats-area { grid-area: teams; }
 
+.header-logo {
+  height: 40px;
+  width: auto;
+  margin-right: 15px;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.2));
+}
+
+.brand-logo-large {
+  height: 80px;
+  width: auto;
+  margin-bottom: 20px;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3));
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+}
+
 .live-auction-area { 
   display: flex; 
   flex-direction: column; 
