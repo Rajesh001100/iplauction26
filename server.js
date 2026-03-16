@@ -131,116 +131,131 @@ io.on('connection', (socket) => {
   });
 
   socket.on('setActivePlayer', async ({ playerId }) => {
-    saveHistory();
-    const player = db.players.find(p => p.id === playerId);
-    if (player && player.status === 'upcoming') {
-      db.globalState.activePlayerId = playerId;
-      db.globalState.currentBid = player.basePrice;
-      db.globalState.currentBidderId = null;
+    try {
+      saveHistory();
+      const player = db.players.find(p => p.id === playerId);
+      if (player && player.status === 'upcoming') {
+        db.globalState.activePlayerId = playerId;
+        db.globalState.currentBid = player.basePrice;
+        db.globalState.currentBidderId = null;
 
-      startTimer();
+        startTimer();
 
-      await supabase.from('global_state').update({
-        activePlayerId: playerId,
-        currentBid: player.basePrice,
-        currentBidderId: null
-      }).eq('id', 1);
+        await supabase.from('global_state').update({
+          activePlayerId: playerId,
+          currentBid: player.basePrice,
+          currentBidderId: null
+        }).eq('id', 1);
 
-      io.emit('stateUpdate', { globalState: db.globalState, players: db.players });
+        io.emit('stateUpdate', { globalState: db.globalState, players: db.players });
+      }
+    } catch (err) {
+      console.error('Error in setActivePlayer:', err);
+      socket.emit('auctionError', 'Failed to set active player. Please try again.');
     }
   });
 
   socket.on('placeBid', async ({ teamId, amount }) => {
-    if (!db.globalState.isTimerRunning || db.globalState.timer <= 0) {
-      socket.emit('auctionError', 'Bidding has ended for this player!');
-      return;
-    }
-    const team = db.teams.find(t => t.id === teamId);
-    if (!team) return;
-
-    if (team.isEliminated) {
-      socket.emit('auctionError', 'This franchise has been ELIMINATED by the Auctioneer and cannot bid!');
-      return;
-    }
-
-    const player = db.players.find(p => p.id === db.globalState.activePlayerId);
-    if (!player) return;
-
-    if (amount > db.globalState.currentBid && amount <= team.budget) {
-      // Rule 1: International Player Limit (max 8)
-      if (player.isOverseas) {
-        const osCount = db.players.filter(p => p.team === teamId && p.isOverseas && p.status === 'sold').length;
-        if (osCount >= 8) {
-          socket.emit('auctionError', `Bid Failed! ${team.name} already has a maximum of 8 International players.`);
-          return;
-        }
+    try {
+      if (!db.globalState.isTimerRunning || db.globalState.timer <= 0) {
+        socket.emit('auctionError', 'Bidding has ended for this player!');
+        return;
       }
+      const team = db.teams.find(t => t.id === teamId);
+      if (!team) return;
 
-      // Rule 2: Squad Size Limit (max 25)
-      if (team.players.length >= 25) {
-        socket.emit('auctionError', `Bid Failed! ${team.name} already has a maximum of 25 players.`);
+      if (team.isEliminated) {
+        socket.emit('auctionError', 'This franchise has been ELIMINATED by the Auctioneer and cannot bid!');
         return;
       }
 
-      db.globalState.currentBid = amount;
-      db.globalState.currentBidderId = teamId;
-
-      startTimer(); // Reset timer on every bid
-
-      await supabase.from('global_state').update({
-        currentBid: amount,
-        currentBidderId: teamId
-      }).eq('id', 1);
-
-      io.emit('stateUpdate', { globalState: db.globalState });
-    }
-  });
-
-  socket.on('markSold', async () => {
-    if (db.globalState.activePlayerId && db.globalState.currentBidderId) {
-      saveHistory();
       const player = db.players.find(p => p.id === db.globalState.activePlayerId);
-      const team = db.teams.find(t => t.id === db.globalState.currentBidderId);
+      if (!player) return;
 
-      if (player && team) {
-        // Strict Squad Limit Check (max 25)
-        if (team.players.length >= 25) {
-          socket.emit('auctionError', `Cannot sell player! ${team.name} already has a maximum of 25 players.`);
-          return;
-        }
-
-        // Strict Overseas Limit Check (max 8)
+      if (amount > db.globalState.currentBid && amount <= team.budget) {
+        // Rule 1: International Player Limit (max 8)
         if (player.isOverseas) {
-          const osCount = db.players.filter(p => p.team === team.id && p.isOverseas && p.status === 'sold').length;
+          const osCount = db.players.filter(p => p.team === teamId && p.isOverseas && p.status === 'sold').length;
           if (osCount >= 8) {
-            socket.emit('auctionError', `Cannot sell player! ${team.name} already has a maximum of 8 International players.`);
+            socket.emit('auctionError', `Bid Failed! ${team.name} already has a maximum of 8 International players.`);
             return;
           }
         }
 
-        const price = db.globalState.currentBid;
-        player.status = 'sold';
-        player.team = team.id;
+        // Rule 2: Squad Size Limit (max 25)
+        if (team.players.length >= 25) {
+          socket.emit('auctionError', `Bid Failed! ${team.name} already has a maximum of 25 players.`);
+          return;
+        }
 
-        // Handle overseas logic if needed...
-        player.finalPrice = price;
-        team.budget -= price;
-        team.players.push(player.id);
+        db.globalState.currentBid = amount;
+        db.globalState.currentBidderId = teamId;
 
-        stopTimer();
-        db.globalState.activePlayerId = null;
-        db.globalState.currentBid = 0;
-        db.globalState.currentBidderId = null;
+        startTimer(); // Reset timer on every bid
 
-        await Promise.all([
-          supabase.from('players').update({ status: 'sold', team: player.team, finalPrice: player.finalPrice }).eq('id', player.id),
-          supabase.from('teams').update({ budget: team.budget, players: team.players }).eq('id', team.id),
-          supabase.from('global_state').update({ activePlayerId: null, currentBid: 0, currentBidderId: null }).eq('id', 1)
-        ]);
+        await supabase.from('global_state').update({
+          currentBid: amount,
+          currentBidderId: teamId
+        }).eq('id', 1);
 
-        io.emit('stateUpdate', { globalState: db.globalState, players: db.players, teams: db.teams });
-        io.emit('playerSold', { player, team, price });
+        io.emit('stateUpdate', { globalState: db.globalState });
       }
+    } catch (err) {
+      console.error('Error in placeBid:', err);
+      socket.emit('auctionError', 'Failed to place bid. Please try again.');
+    }
+  });
+
+  socket.on('markSold', async () => {
+    try {
+      if (db.globalState.activePlayerId && db.globalState.currentBidderId) {
+        saveHistory();
+        const player = db.players.find(p => p.id === db.globalState.activePlayerId);
+        const team = db.teams.find(t => t.id === db.globalState.currentBidderId);
+
+        if (player && team) {
+          // Strict Squad Limit Check (max 25)
+          if (team.players.length >= 25) {
+            socket.emit('auctionError', `Cannot sell player! ${team.name} already has a maximum of 25 players.`);
+            return;
+          }
+
+          // Strict Overseas Limit Check (max 8)
+          if (player.isOverseas) {
+            const osCount = db.players.filter(p => p.team === team.id && p.isOverseas && p.status === 'sold').length;
+            if (osCount >= 8) {
+              socket.emit('auctionError', `Cannot sell player! ${team.name} already has a maximum of 8 International players.`);
+              return;
+            }
+          }
+
+          const price = db.globalState.currentBid;
+          player.status = 'sold';
+          player.team = team.id;
+
+          // Handle overseas logic if needed...
+          player.finalPrice = price;
+          team.budget -= price;
+          team.players.push(player.id);
+
+          stopTimer();
+          db.globalState.activePlayerId = null;
+          db.globalState.currentBid = 0;
+          db.globalState.currentBidderId = null;
+
+          await Promise.all([
+            supabase.from('players').update({ status: 'sold', team: player.team, finalPrice: player.finalPrice }).eq('id', player.id),
+            supabase.from('teams').update({ budget: team.budget, players: team.players }).eq('id', team.id),
+            supabase.from('global_state').update({ activePlayerId: null, currentBid: 0, currentBidderId: null }).eq('id', 1)
+          ]);
+
+          io.emit('stateUpdate', { globalState: db.globalState, players: db.players, teams: db.teams });
+          io.emit('playerSold', { player, team, price });
+        }
+      }
+    } catch (err) {
+      console.error('Error in markSold:', err);
+      socket.emit('auctionError', 'Failed to mark player as sold. Data might be out of sync.');
     }
   });
 
@@ -363,22 +378,32 @@ io.on('connection', (socket) => {
   });
 
   socket.on('updatePlayer', async (playerData) => {
-    if (playerData.id) {
-      let idx = db.players.findIndex(p => p.id === playerData.id);
-      if (idx !== -1) {
-        db.players[idx] = { ...db.players[idx], ...playerData };
-        await supabase.from('players').upsert(db.players[idx]);
+    try {
+      if (playerData.id) {
+        let idx = db.players.findIndex(p => p.id === playerData.id);
+        if (idx !== -1) {
+          db.players[idx] = { ...db.players[idx], ...playerData };
+          await supabase.from('players').upsert(db.players[idx]);
+        }
+      } else {
+        const newPlayer = {
+          ...playerData,
+          id: 'p' + (db.players.length + 1),
+          status: 'upcoming'
+        };
+        db.players.push(newPlayer);
+        await supabase.from('players').insert(newPlayer);
       }
-    } else {
-      const newPlayer = {
-        ...playerData,
-        id: 'p' + (db.players.length + 1),
-        status: 'upcoming'
-      };
-      db.players.push(newPlayer);
-      await supabase.from('players').insert(newPlayer);
+      io.emit('stateUpdate', { players: db.players });
+    } catch (err) {
+      console.error('Error in updatePlayer:', err);
+      socket.emit('auctionError', 'Failed to save player. Please check your network connection.');
     }
-    io.emit('stateUpdate', { players: db.players });
+  });
+
+  socket.on('heartbeat', () => {
+    // Just to keep the connection alive on Render
+    console.log(`Heartbeat from: ${socket.id}`);
   });
 
   socket.on('resetBiddings', async () => {

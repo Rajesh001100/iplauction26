@@ -20,6 +20,14 @@ socket.on('disconnect', () => {
   }
 });
 
+// Keep-alive heartbeat (every 5 mins) to prevent Render sleep
+setInterval(() => {
+  if (currentUser) {
+    console.log('Sending heartbeat...');
+    socket.emit('heartbeat');
+  }
+}, 5 * 60 * 1000);
+
 // State
 let currentUser = null; // { role: 'admin' | 'team' | 'viewer', id?: 't1' }
 let appState = {
@@ -1194,7 +1202,90 @@ btnNewPlayer.addEventListener('click', () => {
 
   document.getElementById('modal-title').innerText = 'Add New Player';
   document.getElementById('btn-delete-player-modal').classList.add('hidden');
+  
+  // Load draft if available
+  loadFormDraft();
+  
   playerModal.classList.remove('hidden');
+});
+
+// --- Form Drafting / Persistence ---
+function saveFormDraft() {
+  const id = document.getElementById('p-id').value;
+  if (id) return; // Don't save drafts for Edits, only for New Players
+
+  const draft = {
+    name: document.getElementById('p-name').value,
+    role: document.getElementById('p-role').value,
+    basePrice: document.getElementById('p-baseprice').value,
+    jersey: document.getElementById('p-jersey').value,
+    overseas: document.getElementById('p-overseas').checked,
+    iplExp: document.getElementById('p-ipl-exp').checked,
+    img: document.getElementById('p-img').value,
+    stats: {
+      runs: document.getElementById('p-runs').value,
+      matches: document.getElementById('p-matches').value,
+      fours: document.getElementById('p-fours').value,
+      sixes: document.getElementById('p-sixes').value,
+      average: document.getElementById('p-average').value,
+      strikeRate: document.getElementById('p-strike-rate').value,
+      hs: document.getElementById('p-hs').value,
+      fifties: document.getElementById('p-fifties').value,
+      wickets: document.getElementById('p-wickets').value,
+      bowlMatches: document.getElementById('p-bowl-matches').value,
+      economy: document.getElementById('p-economy').value,
+      maidens: document.getElementById('p-maidens').value,
+      bbi: document.getElementById('p-bbi').value,
+      fourFive: document.getElementById('p-four-five').value,
+      catches: document.getElementById('p-catches').value,
+      stumpings: document.getElementById('p-stumpings').value
+    }
+  };
+  localStorage.setItem('ipl_player_draft', JSON.stringify(draft));
+}
+
+function loadFormDraft() {
+  const data = localStorage.getItem('ipl_player_draft');
+  if (!data) return;
+  try {
+    const draft = JSON.parse(data);
+    document.getElementById('p-name').value = draft.name || '';
+    document.getElementById('p-role').value = draft.role || 'Batter';
+    document.getElementById('p-baseprice').value = draft.basePrice || '50';
+    document.getElementById('p-jersey').value = draft.jersey || '';
+    document.getElementById('p-overseas').checked = !!draft.overseas;
+    document.getElementById('p-ipl-exp').checked = !!draft.iplExp;
+    document.getElementById('p-img').value = draft.img || '';
+    
+    if (draft.stats) {
+      document.getElementById('p-runs').value = draft.stats.runs || '';
+      document.getElementById('p-matches').value = draft.stats.matches || '';
+      document.getElementById('p-fours').value = draft.stats.fours || '';
+      document.getElementById('p-sixes').value = draft.stats.sixes || '';
+      document.getElementById('p-average').value = draft.stats.average || '';
+      document.getElementById('p-strike-rate').value = draft.stats.strikeRate || '';
+      document.getElementById('p-hs').value = draft.stats.hs || '';
+      document.getElementById('p-fifties').value = draft.stats.fifties || '';
+      document.getElementById('p-wickets').value = draft.stats.wickets || '';
+      document.getElementById('p-bowl-matches').value = draft.stats.bowlMatches || '';
+      document.getElementById('p-economy').value = draft.stats.economy || '';
+      document.getElementById('p-maidens').value = draft.stats.maidens || '';
+      document.getElementById('p-bbi').value = draft.stats.bbi || '';
+      document.getElementById('p-four-five').value = draft.stats.fourFive || '';
+      document.getElementById('p-catches').value = draft.stats.catches || '';
+      document.getElementById('p-stumpings').value = draft.stats.stumpings || '';
+    }
+    updateModalLabels();
+  } catch(e) { console.error("Failed to load draft"); }
+}
+
+function clearFormDraft() {
+  localStorage.removeItem('ipl_player_draft');
+}
+
+// Add event listeners to all form inputs for auto-save
+playerForm.querySelectorAll('input, select').forEach(el => {
+  el.addEventListener('input', saveFormDraft);
 });
 
 // Admin: Modal Delete Button
@@ -1240,6 +1331,7 @@ playerForm.addEventListener('submit', (e) => {
   };
 
   socket.emit('updatePlayer', { id, name, role, basePrice, jerseyNumber, isOverseas, hasIplExp, img, stats });
+  clearFormDraft(); // Clear draft on successful submit
   playerModal.classList.add('hidden');
 });
 
