@@ -267,7 +267,10 @@
   <div id="squad-modal" class="modal hidden">
     <div class="modal-content glass-panel squad-modal-content">
       <span class="close-squad-btn close-btn">&times;</span>
-      <h2 id="squad-title">Team Squad</h2>
+      <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 id="squad-title" style="color: var(--primary); margin:0;">Team Squad</h2>
+        <button id="btn-eliminate-team" class="btn-danger hidden" style="padding: 5px 15px; font-size: 0.8rem;">ELIMINATE FRANCHISE</button>
+      </div>
       <div id="squad-stats-summary" class="squad-summary">
         <!-- Stats summary here -->
       </div>
@@ -338,33 +341,59 @@
           <ul style="list-style: none; padding-left: 0; color: var(--text-main);">
             <li>💰 <strong>Starting Budget:</strong> ₹10,000 Lakhs (₹100 Crore).</li>
             <li>⏱️ <strong>Timer:</strong> 15 seconds. Resets on every new bid.</li>
+            <li>💸 <strong>Mandatory Spend:</strong> Each franchise must spend at least <strong>75% (₹7,500L)</strong> of their budget.</li>
             <li>⚖️ <strong>Bid Increments:</strong> Use provided buttons (+10, +20, etc.).</li>
             <li>🚫 <strong>Elimination:</strong> Auctioneer can eliminate teams for misconduct.</li>
           </ul>
         </div>
 
         <div class="rule-section" style="margin-top: 20px;">
-          <h3 style="color: var(--primary); margin-bottom: 10px;">4. Leaderboard Scoring</h3>
+          <h3 style="color: var(--primary); margin-bottom: 10px;">4. Leaderboard Scoring (Strategic 2.0)</h3>
           <ul style="list-style: none; padding-left: 0; color: var(--text-main);">
-            <li>⭐ <strong>Star Power:</strong> 1 point for every ₹10L spent on players.</li>
-            <li>📏 <strong>Squad Size:</strong> 2 points for every player in your squad.</li>
-            <li>📉 <strong>Balance:</strong> Sum of your Composition points (+/-).</li>
-            <li>⚠️ <strong>Major Penalty:</strong> <span style="color: var(--danger);">-50 pts</span> for size < 18.</li>
-            <li style="margin-top: 10px; padding: 10px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border-left: 4px solid var(--danger); font-size: 0.85rem;">
-              ℹ️ <strong>Why -90 PTS initially?</strong><br>Teams start with -50 (Below 18 players) + -40 (Penalty for missing all 4 role requirements) = <strong>-90 Points.</strong> Start bidding to earn points!
-            </li>
+            <li>🚀 <strong>Performance Rating:</strong> Comprehensive calculation: <code>(Matches × 0.2) + (Runs / 100) + (Wickets × 0.5) + (Avg × 0.5) + (SR / 10) + (4s × 0.1) + (6s × 0.2) + (10 - Economy) + (Catches × 0.1) + (Stumpings × 0.2)</code>.</li>
+            <li>🌍 <strong>Overseas Optimization:</strong> <span style="color: var(--success);">+30 PTS</span> for exactly 8 OS players. <span style="color: var(--danger);">-50 PTS</span> if you exceed 8 OS.</li>
+            <li>💎 <strong>Elite Player Bonus:</strong> <span style="color: var(--success);">+20 PTS</span> for every player bought for ₹1000L+ (₹10 Cr+).</li>
+            <li>🌟 <strong>Specialist Bonuses:</strong> <span style="color: var(--success);">+15 PTS</span> each for Finishers (SR 150+), Anchors (Avg 40+), or Economical Bowlers (Econ < 7).</li>
+            <li>📈 <strong>Budget Efficiency:</strong> 1 point for every ₹100L remaining in your budget.</li>
+            <li>💰 <strong>Mandatory Spend:</strong> Must spend <span style="color: var(--warning);">75% (₹7,500L)</span> of budget.</li>
+            <li>🚩 <strong>Initial Score:</strong> Strategy starts at <span style="color: var(--danger); font-weight: 800;">-140 PTS</span>. Meet goals to climb up!</li>
+            <li>⚠️ <strong>Major Penalty:</strong> <span style="color: var(--danger);">-50 pts</span> for size < 18 or Spend < 75%.</li>
           </ul>
+        <div class="rule-section" style="margin-top: 20px;">
+          <h3 style="color: var(--primary); margin-bottom: 10px;">5. Understanding Score Breakdown (P | S | B | E)</h3>
+          <div style="font-size: 0.85rem; line-height: 1.6; color: var(--text-main); display: grid; gap: 15px;">
+            <div>
+              <strong style="color: var(--primary);">P: Performance Score</strong><br>
+              <span style="font-size: 0.75rem; opacity: 0.8;">REWARDS: Career stats (Quality & Experience)</span><br>
+              <em>Logic:</em> <code>(Exp×0.2) + (Runs/100) + (Wickets×0.5) + (SR/10) + (Avg×0.5) + (4s×0.1 + 6s×0.2) + (10-Econ) + (Ctch×0.1 + Stmp×0.2)</code>
+            </div>
+            <div>
+              <strong style="color: var(--primary);">S: Strategy Score</strong><br>
+              <span style="font-size: 0.75rem; opacity: 0.8;">REWARDS: Roster Balance & Squad Composition</span><br>
+              <em>Logic:</em> Starts at <strong style="color:var(--danger)">-140</strong> points (Deficit: -50 low spend, -50 size < 18, -40 missing roles).<br>
+              • +15 per Role (6/6/3/2), +30 for 8 OS, +25 Complete Squad Bonus. 
+            </div>
+            <div>
+              <strong style="color: var(--primary);">B: Budget Efficiency</strong><br>
+              <span style="font-size: 0.75rem; opacity: 0.8;">REWARDS: Value-for-money bidding</span><br>
+              <em>Logic:</em> 1 Point for every ₹100L (1 Cr) remaining in purse.
+            </div>
+            <div>
+              <strong style="color: var(--primary);">E: Elite & Specialist Bonuses</strong><br>
+              <span style="font-size: 0.75rem; opacity: 0.8;">REWARDS: Superstars & high-impact specialists</span><br>
+              <em>Logic:</em> +20 per ₹10Cr+ player, +15 for Finishers (SR 150+), Anchors (Avg 40+), or Eco Bowlers (Econ < 7).
+            </div>
+          </div>
         </div>
-
+ 
         <div class="rule-section" style="margin-top: 20px; border: 1px dashed var(--primary); background: rgba(212, 175, 55, 0.05);">
-          <h3 style="color: var(--primary); margin-bottom: 10px;">💡 Example Calculation</h3>
+          <h3 style="color: var(--primary); margin-bottom: 10px;">💡 Example Calculation (All-Rounder)</h3>
           <div style="font-size: 0.85rem; line-height: 1.6;">
-            <strong>Scenario:</strong> 18 players, ₹2,000L total spent, All role requirements met.<br>
-            • <strong>Star Power:</strong> 20 pts (2000 spent / 100)<br>
-            • <strong>Squad Size:</strong> 36 pts (18 players × 2)<br>
-            • <strong>Composition:</strong> +60 pts (all roles met)<br>
-            • <strong>Bonus:</strong> <span style="color: var(--primary); font-weight: 700;">+25 pts</span> (Complete Squad Bonus)<br>
-            • <strong>TOTAL RATING:</strong> 20 + 36 + 60 + 25 = <span style="color: var(--primary); font-weight: 800; font-size: 1rem;">141.0</span>
+            <strong>Hardik Pandya:</strong> (123 M / 2309 R / 30.3 Avg / 145 SR / 53 W / 8.8 Econ)<br>
+            • <strong>Exp Score:</strong> 123 × 0.2 = <span style="color: var(--primary);">24.6</span><br>
+            • <strong>Batting:</strong> (23.09 + 15.19 + 14.59) = <span style="color: var(--primary);">52.87</span><br>
+            • <strong>Bowling:</strong> (53 × 0.5) + (10 - 8.8) = <span style="color: var(--primary);">27.70</span><br>
+            • <strong>TOTAL PERFORMANCE RATING:</strong> <span style="color: var(--primary); font-weight: 800; font-size: 1rem;">105.17</span>
           </div>
         </div>
       </div>

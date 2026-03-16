@@ -94,6 +94,7 @@ const squadModal = document.getElementById('squad-modal');
 const squadTitle = document.getElementById('squad-title');
 const squadSummary = document.getElementById('squad-stats-summary');
 const squadPlayersList = document.getElementById('squad-players-list');
+const btnEliminate = document.getElementById('btn-eliminate-team');
 const closeSquadBtn = document.querySelector('.close-squad-btn');
 
 // Sold Animation Elements
@@ -754,52 +755,91 @@ function calculateAndShowLeaderboard() {
   const teamsData = appState.teams.map(team => {
     const squad = appState.players.filter(p => p.team === team.id);
     
-    // Points Calculation Logic
-    let starPower = 0;
-    let balancePoints = 0;
+    // --- Points Calculation Logic (Leaderboard 2.0) ---
+    let performanceScore = 0;
+    let strategyScore = 0;
+    let specialistBonuses = 0;
     
-    // 1. Star Power (Based on points/price value)
-    squad.forEach(p => {
-      // 1 point for every 10L spent (Value perception)
-      starPower += (p.finalPrice / 10);
-    });
+    const counts = { Batter: 0, Bowler: 0, AllRounder: 0, Wicketkeeper: 0, Overseas: 0 };
 
-    // 2. Balance (Composition)
-    const counts = { Batter: 0, Bowler: 0, AllRounder: 0, Wicketkeeper: 0 };
     squad.forEach(p => {
-      const role = p.role.replace('-', '').replace(' ', ''); // Handle 'All-rounder' or 'All rounder'
+      // 1. Role Counting
+      const role = p.role.replace('-', '').replace(' ', '');
       if (role.includes('Batter')) counts.Batter++;
       if (role.includes('Bowler')) counts.Bowler++;
       if (role.includes('All')) counts.AllRounder++;
       if (role.includes('keeper')) counts.Wicketkeeper++;
+      if (p.isOverseas) counts.Overseas++;
+
+      // 2. Performance Points (Stats-based)
+      const stats = p.stats || {};
+      const runs = parseFloat(stats.runs) || 0;
+      const wickets = parseFloat(stats.wickets) || 0;
+      const matches = parseFloat(stats.matches) || 0;
+      const sr = parseFloat(stats.strikeRate) || 0;
+      const avg = parseFloat(stats.average) || 0;
+      const econ = parseFloat(stats.economy) || 10; // Default high economy if missing
+
+      // Matches (0.2) + Runs (0.01) + Wickets (0.5) + Avg (0.5) + SR (0.1) + Boundaries (0.1/0.2) + Econ Bonus (10 - Econ) + WK (0.1/0.2)
+      const matchesToCount = matches || parseFloat(stats.bowlMatches) || 0;
+      const fours = parseFloat(stats.fours) || 0;
+      const sixes = parseFloat(stats.sixes) || 0;
+      const econBonus = stats.economy ? (10 - parseFloat(stats.economy)) : 0;
+      const catches = parseFloat(stats.catches) || 0;
+      const stumpings = parseFloat(stats.stumpings) || 0;
+      
+      performanceScore += (matchesToCount * 0.2) + (runs / 100) + (wickets * 0.5) + (avg * 0.5) + (sr / 10) + (fours * 0.1) + (sixes * 0.2) + (catches * 0.1) + (stumpings * 0.2) + econBonus;
+
+      // 3. Elite Player Bonus (+20 for huge buys > 10 Cr)
+      if (p.finalPrice >= 1000) specialistBonuses += 20;
+
+      // 4. Role Specialist Bonuses
+      // Finisher (Batter/AR with SR > 150)
+      if ((role.includes('Batter') || role.includes('All')) && sr > 150) specialistBonuses += 15;
+      // Anchor (Batter with Avg > 40)
+      if (role.includes('Batter') && avg > 40) specialistBonuses += 15;
+      // Wicked Spinner/Efficient Bowler (Bowler with Economy < 7)
+      if (role.includes('Bowler') && econ < 7 && econ > 0) specialistBonuses += 15;
     });
 
-    // Award bonus points for reaching minimum balance (New Rules: 6/6/3/2)
+    // 5. Overseas Optimization
+    if (counts.Overseas === 8) {
+      strategyScore += 30; // Perfect Balance
+    } else if (counts.Overseas > 8) {
+      strategyScore -= 50; // Violation Penalty
+    }
+
+    // 6. Composition Bonuses (REQS: 6/6/3/2)
     const REQS = { Batter: 6, Bowler: 6, AllRounder: 3, Wicketkeeper: 2 };
     let metAll = true;
-    
     Object.keys(REQS).forEach(role => {
       if (counts[role] >= REQS[role]) {
-        balancePoints += 15; // Increased bonus for meeting minimum
+        strategyScore += 15;
       } else {
         metAll = false;
-        balancePoints -= 10; // Penalty for not meeting minimum
+        strategyScore -= 10;
       }
     });
 
     if (squad.length < 18) {
-      balancePoints -= 50; // Heavy penalty for less than 18 players
+      strategyScore -= 50; // Under-size penalty
       metAll = false;
     }
+    if (metAll) strategyScore += 25; // Complete Squad Bonus
 
-    if (metAll) balancePoints += 25; // "Complete Squad" bonus
+    // 7. Budget Efficiency (+1 pt per 100L remaining)
+    const STARTING_BUDGET = 10000;
+    const spent = STARTING_BUDGET - team.budget;
+    const budgetBonus = team.budget / 100;
 
-    // 3. Roster Size
-    const rosterPoints = squad.length * 2;
+    // 8. Mandatory 75% Spend Penalty (-50 pts if spent < 7,500L)
+    if (spent < 7500) {
+      strategyScore -= 50;
+    }
 
-    const totalScore = (starPower + balancePoints + rosterPoints).toFixed(1);
+    const totalScore = (performanceScore + strategyScore + specialistBonuses + budgetBonus).toFixed(1);
 
-    return { ...team, squad, totalScore, counts };
+    return { ...team, squad, totalScore, counts, statsBreakdown: { performanceScore, strategyScore, specialistBonuses, budgetBonus } };
   });
 
   // Sort by score
@@ -815,12 +855,17 @@ function calculateAndShowLeaderboard() {
           <div style="flex:1">
             <div style="font-weight:800; font-size:1.1rem;">${t.name} ${idx === 0 ? '👑' : ''}</div>
             <div style="font-size:0.8rem; color:var(--text-muted);">
-              ${t.counts.Batter} BAT | ${t.counts.Bowler} BOWL | ${t.counts.AllRounder} AR | ${t.counts.Wicketkeeper} WK
+              ${t.counts.Batter} BAT | ${t.counts.Bowler} BOWL | ${t.counts.AllRounder} AR | ${t.counts.Wicketkeeper} WK | <span style="color: ${t.counts.Overseas > 8 ? '#ef4444' : (t.counts.Overseas === 8 ? '#10b981' : 'var(--text-muted)')}">${t.counts.Overseas} OS</span>
             </div>
           </div>
           <div style="text-align:right">
             <div style="font-size:1.5rem; font-weight:900; color:var(--primary);">${t.totalScore}</div>
-            <div style="font-size:0.7rem; text-transform:uppercase;">Squad Rating</div>
+            <div style="font-size:0.6rem; text-transform:uppercase; color:var(--text-muted); line-height:1.2;">
+                P: ${t.statsBreakdown.performanceScore.toFixed(1)} | 
+                S: ${t.statsBreakdown.strategyScore.toFixed(0)}<br>
+                B: ${t.statsBreakdown.budgetBonus.toFixed(1)} | 
+                E: ${t.statsBreakdown.specialistBonuses.toFixed(0)}
+            </div>
           </div>
         </div>
       </div>
@@ -1079,12 +1124,36 @@ document.getElementById('btn-unsold').addEventListener('click', () => {
 document.querySelectorAll('.btn-bid').forEach(btn => {
   btn.addEventListener('click', (e) => {
     if (currentUser.role !== 'team') return;
+    
+    const myTeam = appState.teams.find(t => t.id === currentUser.id);
+    if (!myTeam) return;
+
+    if (myTeam.isEliminated) {
+      alert("This franchise has been ELIMINATED and cannot bid!");
+      return;
+    }
+
     const bidAmount = parseInt(e.target.dataset.amount);
     const newTotal = appState.globalState.currentBid + bidAmount;
     
-    const myTeam = appState.teams.find(t => t.id === currentUser.id);
     if (newTotal > myTeam.budget) {
       alert("Insufficient Budget!");
+      return;
+    }
+
+    // Client-side guard for Overseas & Squad limits
+    const activePlayer = appState.players.find(p => p.id === appState.globalState.activePlayerId);
+    if (activePlayer && activePlayer.isOverseas) {
+      const mySquad = appState.players.filter(p => p.team === myTeam.id && p.status === 'sold');
+      const osCount = mySquad.filter(p => p.isOverseas).length;
+      if (osCount >= 8) {
+        alert("Strategic Limit: You already have 8 Overseas players!");
+        return;
+      }
+    }
+
+    if (myTeam.players.length >= 25) {
+      alert("Squad Limit: Your roster is full (max 25 players)!");
       return;
     }
     
@@ -1181,6 +1250,22 @@ window.viewSquad = function(teamId) {
   if (!team) return;
 
   squadTitle.innerText = `${team.name} - Squad`;
+
+  // Admin Toggle for Elimination
+  if (btnEliminate) {
+    if (currentUser?.role === 'admin') {
+      btnEliminate.classList.remove('hidden');
+      btnEliminate.textContent = team.isEliminated ? 'RESTORE FRANCHISE' : 'ELIMINATE FRANCHISE';
+      btnEliminate.style.background = team.isEliminated ? 'var(--success)' : 'var(--danger)';
+      btnEliminate.onclick = () => {
+        if (confirm(`Are you sure you want to ${team.isEliminated ? 'RESTORE' : 'ELIMINATE'} ${team.name}?`)) {
+          socket.emit('toggleEliminateTeam', { teamId: team.id });
+        }
+      };
+    } else {
+      btnEliminate.classList.add('hidden');
+    }
+  }
   
   const squadPlayers = appState.players.filter(p => p.team === teamId);
   const counts = { Batter: 0, Bowler: 0, 'All-rounder': 0, 'Wicketkeeper-Batsman': 0, 'Wicketkeeper': 0 };

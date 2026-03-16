@@ -163,7 +163,25 @@ io.on('connection', (socket) => {
       return;
     }
 
+    const player = db.players.find(p => p.id === db.globalState.activePlayerId);
+    if (!player) return;
+
     if (amount > db.globalState.currentBid && amount <= team.budget) {
+      // Rule 1: International Player Limit (max 8)
+      if (player.isOverseas) {
+        const osCount = db.players.filter(p => p.team === teamId && p.isOverseas && p.status === 'sold').length;
+        if (osCount >= 8) {
+          socket.emit('auctionError', `Bid Failed! ${team.name} already has a maximum of 8 International players.`);
+          return;
+        }
+      }
+
+      // Rule 2: Squad Size Limit (max 25)
+      if (team.players.length >= 25) {
+        socket.emit('auctionError', `Bid Failed! ${team.name} already has a maximum of 25 players.`);
+        return;
+      }
+
       db.globalState.currentBid = amount;
       db.globalState.currentBidderId = teamId;
 
@@ -185,10 +203,19 @@ io.on('connection', (socket) => {
       const team = db.teams.find(t => t.id === db.globalState.currentBidderId);
 
       if (player && team) {
-        // Strict Squad Limit Check
+        // Strict Squad Limit Check (max 25)
         if (team.players.length >= 25) {
           socket.emit('auctionError', `Cannot sell player! ${team.name} already has a maximum of 25 players.`);
           return;
+        }
+
+        // Strict Overseas Limit Check (max 8)
+        if (player.isOverseas) {
+          const osCount = db.players.filter(p => p.team === team.id && p.isOverseas && p.status === 'sold').length;
+          if (osCount >= 8) {
+            socket.emit('auctionError', `Cannot sell player! ${team.name} already has a maximum of 8 International players.`);
+            return;
+          }
         }
 
         const price = db.globalState.currentBid;

@@ -14,6 +14,30 @@
   --glow: 0 0 20px rgba(212, 175, 55, 0.5); /* Gold glow */
 }
 
+.team-card.eliminated {
+  opacity: 0.7;
+  border-color: var(--danger) !important;
+  filter: grayscale(0.5);
+}
+
+.team-card.is-eliminated {
+  border-color: var(--danger) !important;
+  background: rgba(239, 68, 68, 0.05) !important;
+}
+
+.eliminated-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: var(--danger);
+  color: white;
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  z-index: 5;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
