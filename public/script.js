@@ -230,6 +230,15 @@ function updateTimerUI(endTime) {
   const now = Date.now();
   const remaining = endTime ? Math.max(0, Math.ceil((endTime - now) / 1000)) : 0;
 
+  // Unlock UI if time is added after a timeout
+  if (remaining > 0) {
+    const auctionControlsDisplay = document.getElementById('team-controls');
+    if (auctionControlsDisplay && auctionControlsDisplay.style.pointerEvents === 'none') {
+      auctionControlsDisplay.style.opacity = '1';
+      auctionControlsDisplay.style.pointerEvents = 'auto';
+    }
+  }
+
   // Only update if the value actually changed
   if (remaining !== parseInt(timerVal.textContent)) {
     // Prevent overwriting the "Bidding Ended" text if the timer finished
@@ -1276,6 +1285,7 @@ if (btnBidBase) {
       return;
     }
 
+    console.log(`Attempting base price bid for player ${player.name} at amount ${player.basePrice}`);
     socket.emit('placeBid', { teamId: currentUser.id, amount: player.basePrice });
   });
 }

@@ -172,7 +172,7 @@ io.on('connection', (socket) => {
       const player = db.players.find(p => p.id === db.globalState.activePlayerId);
       if (!player) return;
 
-      if (amount > db.globalState.currentBid && amount <= team.budget) {
+      if ((amount > db.globalState.currentBid || (amount === db.globalState.currentBid && !db.globalState.currentBidderId)) && amount <= team.budget) {
         db.globalState.currentBid = amount;
         db.globalState.currentBidderId = teamId;
 
