@@ -427,7 +427,8 @@ function renderLiveAuction() {
     <div class="stat-box"><div class="stat-value">${getStat(stats.average || stats.bowlAvg)}</div><div class="stat-label">Avg</div></div>
     <div class="stat-box"><div class="stat-value">${getStat(stats.bowlMatches)}</div><div class="stat-label">Matches</div></div>
     <div class="stat-box"><div class="stat-value">${getStat(stats.bbi)}</div><div class="stat-label">BBI</div></div>
-    <div class="stat-box"><div class="stat-value">${getStat(stats.maidens)}</div><div class="stat-label">Maidens</div></div>
+    <div class="stat-box"><div class="stat-value">${getStat(stats.ballsBowled)}</div><div class="stat-label">Balls</div></div>
+    <div class="stat-box"><div class="stat-value">${getStat(stats.bowlerStrikeRate)}</div><div class="stat-label">S/R</div></div>
     <div class="stat-box"><div class="stat-value">${getStat(stats.fourFive)}</div><div class="stat-label">4w/5w</div></div>
   `;
 
@@ -551,6 +552,12 @@ function renderPlayersList() {
 
     const img = p.img || 'https://images2.imgbox.com/6c/d2/8I1zS2mY_o.png'; 
     
+    let playerPoints = '';
+    if (currentUser.role === 'admin') {
+      const score = calculatePlayerScore(p);
+      playerPoints = `<div class="p-list-points" style="font-size:0.7rem; font-weight:800; color:var(--success); background:rgba(34,197,94,0.1); padding:2px 6px; border-radius:4px; margin-left:5px;">${score.total.toFixed(1)} PTS</div>`;
+    }
+
     html += `
       <div class="list-item ${p.status === 'sold' ? 'sold-item' : ''}">
         <div class="p-list-left">
@@ -560,7 +567,7 @@ function renderPlayersList() {
            </div>
            <div class="p-list-info">
               <span class="p-list-name">${p.name} ${p.isOverseas ? '✈️' : ''}</span>
-              <span class="p-list-role">${p.role}</span>
+              <span class="p-list-role">${p.role} ${playerPoints}</span>
            </div>
         </div>
         <div style="display:flex;align-items:center; gap: 5px;">
@@ -759,6 +766,97 @@ if (btnLeaderboard) {
   });
 }
 
+function calculatePlayerScore(p) {
+  const stats = p.stats || {};
+  const role = p.role ? p.role.replace('-', '').replace(' ', '') : '';
+  
+  // Extraction & Parsing
+  const runs = parseFloat(stats.runs) || 0;
+  const wickets = parseFloat(stats.wickets) || 0;
+  const matches = parseFloat(stats.matches) || parseFloat(stats.bowlMatches) || 0;
+  const sr = parseFloat(stats.strikeRate) || 0;
+  const avg = parseFloat(stats.average) || 0;
+  const fours = parseFloat(stats.fours) || 0;
+  const sixes = parseFloat(stats.sixes) || 0;
+  const catches = parseFloat(stats.catches) || 0;
+  const stumpings = parseFloat(stats.stumpings) || 0;
+  const econVal = parseFloat(stats.economy) || 0;
+  const bSrValue = parseFloat(stats.bowlerStrikeRate) || 0;
+  const ballsValue = parseFloat(stats.ballsBowled) || 0;
+
+  const matchesSafe = matches || 1;
+
+  let fifties = 0, hundreds = 0;
+  if (stats.fiftiesHundreds && stats.fiftiesHundreds.includes('/')) {
+    const parts = stats.fiftiesHundreds.split('/');
+    fifties = parseFloat(parts[0]) || 0;
+    hundreds = parseFloat(parts[1]) || 0;
+  }
+
+  let fourW = 0, fiveW = 0;
+  if (stats.fourFive && stats.fourFive.includes('/')) {
+    const parts = stats.fourFive.split('/');
+    fourW = parseFloat(parts[0]) || 0;
+    fiveW = parseFloat(parts[1]) || 0;
+  }
+
+  // 1. Reliability (Experience) Factor - Logarithmic Scale
+  // This respects experience (100 matches > 10 matches) without letting it create infinite gaps.
+  const experienceFactor = Math.log10(matchesSafe + 1) * 150;
+
+  // 2. Role Core Score (Normalized Per Match)
+  let performanceScore = 0;
+  
+  // --- Batting Component ---
+  if (role.includes('Batter') || role.includes('All') || role.includes('keeper')) {
+    const runsPerMatch = runs / matchesSafe;
+    const batBase = (runsPerMatch * 4); // Adjusted slightly for boundaries
+    const batEfficiency = (avg * 5) + (sr * 1); 
+    const milestoneBonus = ((fifties * 50) + (hundreds * 200)) / matchesSafe;
+    const boundaryImpact = ((fours * 0.5) + (sixes * 1.5)) / matchesSafe;
+    
+    performanceScore += batBase + batEfficiency + milestoneBonus + boundaryImpact;
+  }
+
+  // --- Bowling Component ---
+  if (role.includes('Bowler') || role.includes('All')) {
+    const wicketsPerMatch = wickets / matchesSafe;
+    const bowlBase = (wicketsPerMatch * 100); // Adjusted for SR bonus
+    const bowlEfficiency = (econVal > 0 ? (12 - econVal) * 40 : 0) + (bSrValue > 0 && bSrValue < 24 ? (24 - bSrValue) * 3 : 0);
+    const milestoneBonus = ((fourW * 100) + (fiveW * 250)) / matchesSafe;
+    const volumeImpact = (ballsValue / 6) / matchesSafe * 2; // Overs per match impact
+    
+    performanceScore += bowlBase + bowlEfficiency + milestoneBonus + volumeImpact;
+  }
+
+  // --- Fielding/Keeping ---
+  const fieldImpact = ((catches * 10) + (stumpings * 25)) / matchesSafe;
+  performanceScore += fieldImpact;
+
+  // 3. Sample Size Multiplier (Confidence)
+  // Penalize extreme outliers with < 10 matches slightly for volatility
+  let confidenceMult = 1.0;
+  if (matchesSafe < 10) confidenceMult = 0.85;
+  else if (matchesSafe < 25) confidenceMult = 0.95;
+
+  let finalScore = (performanceScore * confidenceMult) + experienceFactor;
+
+  // 4. Specialist Bonuses (Value Addons)
+  let specialistBonuses = 0;
+  if ((role.includes('Batter') || role.includes('All')) && sr > 150) specialistBonuses += 50;
+  if (role.includes('Bowler') && econVal < 7.5 && econVal > 0) specialistBonuses += 50;
+  
+  // High Valuation / MVP potential
+  if (p.finalPrice >= 1400) specialistBonuses += 40;
+  else if (p.finalPrice >= 800) specialistBonuses += 20;
+
+  return { 
+    performance: finalScore, 
+    specialist: specialistBonuses,
+    total: finalScore + specialistBonuses 
+  };
+}
+
 function calculateAndShowLeaderboard() {
   const teamsData = appState.teams.map(team => {
     const squad = appState.players.filter(p => p.team === team.id);
@@ -779,35 +877,9 @@ function calculateAndShowLeaderboard() {
       if (role.includes('keeper')) counts.Wicketkeeper++;
       if (p.isOverseas) counts.Overseas++;
 
-      // 2. Performance Points (Stats-based)
-      const stats = p.stats || {};
-      const runs = parseFloat(stats.runs) || 0;
-      const wickets = parseFloat(stats.wickets) || 0;
-      const matches = parseFloat(stats.matches) || 0;
-      const sr = parseFloat(stats.strikeRate) || 0;
-      const avg = parseFloat(stats.average) || 0;
-      const econ = parseFloat(stats.economy) || 10; // Default high economy if missing
-
-      // Matches (0.2) + Runs (0.01) + Wickets (0.5) + Avg (0.5) + SR (0.1) + Boundaries (0.1/0.2) + Econ Bonus (10 - Econ) + WK (0.1/0.2)
-      const matchesToCount = matches || parseFloat(stats.bowlMatches) || 0;
-      const fours = parseFloat(stats.fours) || 0;
-      const sixes = parseFloat(stats.sixes) || 0;
-      const econBonus = stats.economy ? (10 - parseFloat(stats.economy)) : 0;
-      const catches = parseFloat(stats.catches) || 0;
-      const stumpings = parseFloat(stats.stumpings) || 0;
-      
-      performanceScore += (matchesToCount * 0.2) + (runs / 100) + (wickets * 0.5) + (avg * 0.5) + (sr / 10) + (fours * 0.1) + (sixes * 0.2) + (catches * 0.1) + (stumpings * 0.2) + econBonus;
-
-      // 3. Elite Player Bonus (+20 for huge buys > 10 Cr)
-      if (p.finalPrice >= 1000) specialistBonuses += 20;
-
-      // 4. Role Specialist Bonuses
-      // Finisher (Batter/AR with SR > 150)
-      if ((role.includes('Batter') || role.includes('All')) && sr > 150) specialistBonuses += 15;
-      // Anchor (Batter with Avg > 40)
-      if (role.includes('Batter') && avg > 40) specialistBonuses += 15;
-      // Wicked Spinner/Efficient Bowler (Bowler with Economy < 7)
-      if (role.includes('Bowler') && econ < 7 && econ > 0) specialistBonuses += 15;
+      const score = calculatePlayerScore(p);
+      performanceScore += score.performance;
+      specialistBonuses += score.specialist;
     });
 
     // 5. Overseas Optimization
@@ -1072,7 +1144,8 @@ window.editPlayer = function(playerId) {
   document.getElementById('p-wickets').value = stats.wickets || '';
   document.getElementById('p-bowl-matches').value = stats.bowlMatches || '';
   document.getElementById('p-economy').value = stats.economy || '';
-  document.getElementById('p-maidens').value = stats.maidens || '';
+  document.getElementById('p-bowl-balls').value = stats.ballsBowled || '';
+  document.getElementById('p-bowl-sr').value = stats.bowlerStrikeRate || '';
   document.getElementById('p-bbi').value = stats.bbi || '';
   document.getElementById('p-four-five').value = stats.fourFive || '';
 
@@ -1234,7 +1307,8 @@ function saveFormDraft() {
       wickets: document.getElementById('p-wickets').value,
       bowlMatches: document.getElementById('p-bowl-matches').value,
       economy: document.getElementById('p-economy').value,
-      maidens: document.getElementById('p-maidens').value,
+      ballsBowled: document.getElementById('p-bowl-balls').value,
+      strikeRate: document.getElementById('p-bowl-sr').value,
       bbi: document.getElementById('p-bbi').value,
       fourFive: document.getElementById('p-four-five').value,
       catches: document.getElementById('p-catches').value,
@@ -1269,7 +1343,8 @@ function loadFormDraft() {
       document.getElementById('p-wickets').value = draft.stats.wickets || '';
       document.getElementById('p-bowl-matches').value = draft.stats.bowlMatches || '';
       document.getElementById('p-economy').value = draft.stats.economy || '';
-      document.getElementById('p-maidens').value = draft.stats.maidens || '';
+      document.getElementById('p-bowl-balls').value = draft.stats.ballsBowled || '';
+      document.getElementById('p-bowl-sr').value = draft.stats.strikeRate || '';
       document.getElementById('p-bbi').value = draft.stats.bbi || '';
       document.getElementById('p-four-five').value = draft.stats.fourFive || '';
       document.getElementById('p-catches').value = draft.stats.catches || '';
@@ -1323,7 +1398,8 @@ playerForm.addEventListener('submit', (e) => {
     wickets: document.getElementById('p-wickets').value,
     bowlMatches: document.getElementById('p-bowl-matches').value,
     economy: document.getElementById('p-economy').value,
-    maidens: document.getElementById('p-maidens').value,
+    ballsBowled: document.getElementById('p-bowl-balls').value,
+    bowlerStrikeRate: document.getElementById('p-bowl-sr').value,
     bbi: document.getElementById('p-bbi').value,
     fourFive: document.getElementById('p-four-five').value,
     catches: document.getElementById('p-catches').value,

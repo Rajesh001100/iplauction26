@@ -230,8 +230,12 @@
             <input type="text" id="p-economy" placeholder="8.27">
           </div>
           <div>
-            <label>Maidens</label>
-            <input type="text" id="p-maidens" placeholder="0">
+            <label>Balls Bowled</label>
+            <input type="text" id="p-bowl-balls" placeholder="90">
+          </div>
+          <div>
+            <label>Strike Rate</label>
+            <input type="text" id="p-bowl-sr" placeholder="18.5">
           </div>
           <div>
             <label>BBI</label>
@@ -348,52 +352,77 @@
         </div>
 
         <div class="rule-section" style="margin-top: 20px;">
-          <h3 style="color: var(--primary); margin-bottom: 10px;">4. Leaderboard Scoring (Strategic 2.0)</h3>
-          <ul style="list-style: none; padding-left: 0; color: var(--text-main);">
-            <li>🚀 <strong>Performance Rating:</strong> Comprehensive calculation: <code>(Matches × 0.2) + (Runs / 100) + (Wickets × 0.5) + (Avg × 0.5) + (SR / 10) + (4s × 0.1) + (6s × 0.2) + (10 - Economy) + (Catches × 0.1) + (Stumpings × 0.2)</code>.</li>
-            <li>🌍 <strong>Overseas Optimization:</strong> <span style="color: var(--success);">+30 PTS</span> for exactly 8 OS players. <span style="color: var(--danger);">-50 PTS</span> if you exceed 8 OS.</li>
-            <li>💎 <strong>Elite Player Bonus:</strong> <span style="color: var(--success);">+20 PTS</span> for every player bought for ₹1000L+ (₹10 Cr+).</li>
-            <li>🌟 <strong>Specialist Bonuses:</strong> <span style="color: var(--success);">+15 PTS</span> each for Finishers (SR 150+), Anchors (Avg 40+), or Economical Bowlers (Econ < 7).</li>
-            <li>📈 <strong>Budget Efficiency:</strong> 1 point for every ₹100L remaining in your budget.</li>
-            <li>💰 <strong>Mandatory Spend:</strong> Must spend <span style="color: var(--warning);">75% (₹7,500L)</span> of budget.</li>
-            <li>🚩 <strong>Initial Score:</strong> Strategy starts at <span style="color: var(--danger); font-weight: 800;">-140 PTS</span>. Meet goals to climb up!</li>
-            <li>⚠️ <strong>Major Penalty:</strong> <span style="color: var(--danger);">-50 pts</span> for size < 18 or Spend < 75%.</li>
-          </ul>
-        <div class="rule-section" style="margin-top: 20px;">
-          <h3 style="color: var(--primary); margin-bottom: 10px;">5. Understanding Score Breakdown (P | S | B | E)</h3>
-          <div style="font-size: 0.85rem; line-height: 1.6; color: var(--text-main); display: grid; gap: 15px;">
-            <div>
-              <strong style="color: var(--primary);">P: Performance Score</strong><br>
-              <span style="font-size: 0.75rem; opacity: 0.8;">REWARDS: Career stats (Quality & Experience)</span><br>
-              <em>Logic:</em> <code>(Exp×0.2) + (Runs/100) + (Wickets×0.5) + (SR/10) + (Avg×0.5) + (4s×0.1 + 6s×0.2) + (10-Econ) + (Ctch×0.1 + Stmp×0.2)</code>
-            </div>
-            <div>
-              <strong style="color: var(--primary);">S: Strategy Score</strong><br>
-              <span style="font-size: 0.75rem; opacity: 0.8;">REWARDS: Roster Balance & Squad Composition</span><br>
-              <em>Logic:</em> Starts at <strong style="color:var(--danger)">-140</strong> points (Deficit: -50 low spend, -50 size < 18, -40 missing roles).<br>
-              • +15 per Role (6/6/3/2), +30 for 8 OS, +25 Complete Squad Bonus. 
-            </div>
-            <div>
-              <strong style="color: var(--primary);">B: Budget Efficiency</strong><br>
-              <span style="font-size: 0.75rem; opacity: 0.8;">REWARDS: Value-for-money bidding</span><br>
-              <em>Logic:</em> 1 Point for every ₹100L (1 Cr) remaining in purse.
-            </div>
-            <div>
-              <strong style="color: var(--primary);">E: Elite & Specialist Bonuses</strong><br>
-              <span style="font-size: 0.75rem; opacity: 0.8;">REWARDS: Superstars & high-impact specialists</span><br>
-              <em>Logic:</em> +20 per ₹10Cr+ player, +15 for Finishers (SR 150+), Anchors (Avg 40+), or Eco Bowlers (Econ < 7).
+          <h2 style="text-align: center; color: var(--primary); margin-bottom: 20px;">📜 WINNER'S FLASHCARDS (PSBE 6.1 - DEEP EQUITY)</h2>
+          
+          <!-- Card 1 -->
+          <div class="glass-panel" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid var(--primary);">
+            <h3 style="color: var(--primary); margin-bottom: 8px;">🗂️ CARD 1: PERFORMANCE (The "P")</h3>
+              <li>✅ <strong>Normalization:</strong> Scores are calculated <strong>Per Match</strong>. Modern stars can now compete with legends.</li>
+              <li>🏏 <strong>Batters:</strong> Points for <strong>Runs/m</strong>, <strong>Avg (5x)</strong>, <strong>S/R (1x)</strong>, and <strong>Boundaries</strong>.</li>
+              <li>🏐 <strong>Bowlers:</strong> Points for <strong>Wickets/m</strong>, <strong>Economy</strong>, and <strong>Strike Rate</strong>.</li>
+              <li>🧤 <strong>Keepers:</strong> Performance points for <strong>Catches</strong> and <strong>Stumpings</strong> (normalized).</li>
+              <li>⚡ <strong>Experience:</strong> Experience (100+ matches) adds a <strong>Logarithmic Stability Bonus</strong>.</li>
+              <li>❌ <strong>Confidence:</strong> Small discount (< 15% ) for players with <strong>< 10 matches</strong> due to volatility.</li>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="glass-panel" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid var(--success);">
+            <h3 style="color: var(--success); margin-bottom: 8px;">🗂️ CARD 2: STRATEGY (The "S")</h3>
+            <p style="font-size: 0.9rem; margin-bottom: 5px;"><strong>Is your squad balanced?</strong></p>
+            <ul style="list-style: none; padding-left: 0; font-size: 0.85rem; line-height: 1.6;">
+              <li>🌍 <strong>Magic 8:</strong> Get exactly <strong>8 International players</strong> (+30 pts).</li>
+              <li>👥 <strong>Roles:</strong> Need <strong>6 Batters, 6 Bowlers, 3 All-rounders, 2 Keepers</strong>.</li>
+              <li>🏆 <strong>Met All Req:</strong> Get <strong style="color:var(--success)">+75 pts</strong> for a perfectly balanced squad!</li>
+            </ul>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="glass-panel" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid #00c6ff;">
+            <h3 style="color: #00c6ff; margin-bottom: 8px;">🗂️ CARD 3: BUDGET (The "B")</h3>
+            <p style="font-size: 0.9rem; margin-bottom: 5px;"><strong>Are you good with money?</strong></p>
+            <ul style="list-style: none; padding-left: 0; font-size: 0.85rem; line-height: 1.6;">
+              <li>💰 <strong>Mandatory Spend:</strong> Spend at least **75% (₹7,500L)**.</li>
+              <li>📉 <strong>Penalty:</strong> Spending < 75% = <strong style="color:var(--danger)">-50 points</strong>.</li>
+              <li>💎 <strong>Efficiency:</strong> Saving money *after* the 75% limit gives bonus points.</li>
+            </ul>
+          </div>
+
+          <!-- Card 4 -->
+          <div class="glass-panel" style="background: rgba(212, 175, 55, 0.1); padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px dashed var(--primary);">
+            <h3 style="color: var(--primary); margin-bottom: 8px;">🗂️ CARD 4: WINNING TIPS</h3>
+            <ul style="list-style: none; padding-left: 0; font-size: 0.85rem; line-height: 1.6;">
+              <li>🌟 <strong>MVP Bonus:</strong> Any ₹14 Cr+ player gives **+40 bonus pts** for match-winning potential.</li>
+              <li>⚡ <strong>Power Player:</strong> Batters with **150+ S/R** or Bowlers with **<7.5 Econ** earn **+50 PTS**.</li>
+            </ul>
+          </div>
+
+          <!-- Card 5 (Examples) -->
+          <div class="glass-panel" style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; border-left: 4px solid #00f2fe; margin-bottom: 15px;">
+            <h3 style="color: #00f2fe; margin-bottom: 8px;">📝 EXAMPLE 1: PHIL SALT (BATTER)</h3>
+            <div style="font-size: 0.8rem; line-height: 1.4; color: rgba(255,255,255,0.8);">
+              <p><strong>Stats:</strong> 600 Runs, 20 Matches, 35 Avg, 165 S/R, 40x4s, 20x6s</p>
+              <ul style="list-style: none; padding-left: 10px; border-left: 1px solid rgba(255,255,255,0.2);">
+                <li>🔹 <strong>Exp Bonus:</strong> log(20m) * 150 ≈ <strong>+198</strong></li>
+                <li>🔹 <strong>Stability (Runs/m + Boundaries):</strong> ≈ <strong>+175</strong></li>
+                <li>🔹 <strong>Quality (Avg*5 + SR*1):</strong> ≈ <strong>+340</strong></li>
+                <li>🔹 <strong>Power Bonus (S/R > 150):</strong> <strong>+50</strong></li>
+                <li>🔥 <strong>TOTAL SCORE:</strong> (515 * 0.95 Conf) + 198 + 50 = <strong>737.2 PTS</strong></li>
+              </ul>
             </div>
           </div>
-        </div>
- 
-        <div class="rule-section" style="margin-top: 20px; border: 1px dashed var(--primary); background: rgba(212, 175, 55, 0.05);">
-          <h3 style="color: var(--primary); margin-bottom: 10px;">💡 Example Calculation (All-Rounder)</h3>
-          <div style="font-size: 0.85rem; line-height: 1.6;">
-            <strong>Hardik Pandya:</strong> (123 M / 2309 R / 30.3 Avg / 145 SR / 53 W / 8.8 Econ)<br>
-            • <strong>Exp Score:</strong> 123 × 0.2 = <span style="color: var(--primary);">24.6</span><br>
-            • <strong>Batting:</strong> (23.09 + 15.19 + 14.59) = <span style="color: var(--primary);">52.87</span><br>
-            • <strong>Bowling:</strong> (53 × 0.5) + (10 - 8.8) = <span style="color: var(--primary);">27.70</span><br>
-            • <strong>TOTAL PERFORMANCE RATING:</strong> <span style="color: var(--primary); font-weight: 800; font-size: 1rem;">105.17</span>
+
+          <div class="glass-panel" style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; border-left: 4px solid #a18cd1;">
+            <h3 style="color: #a18cd1; margin-bottom: 8px;">📝 EXAMPLE 2: JASPRIT BUMRAH (BOWLER)</h3>
+            <div style="font-size: 0.8rem; line-height: 1.4; color: rgba(255,255,255,0.8);">
+              <p><strong>Stats:</strong> 150 Wkts, 125 Matches, 6.8 Econ, 18.5 SR, 2800 Balls</p>
+              <ul style="list-style: none; padding-left: 10px; border-left: 1px solid rgba(255,255,255,0.2);">
+                <li>🔹 <strong>Exp Bonus:</strong> log(125m) * 150 ≈ <strong>+315</strong></li>
+                <li>🔹 <strong>Quality (Wkts/m + Econ):</strong> ≈ <strong>+328</strong></li>
+                <li>🔹 <strong>Strike Skill (Bowl SR < 24):</strong> ≈ <strong>+19</strong></li>
+                <li>🔹 <strong>Power Bonus (Econ < 7.5):</strong> <strong>+50</strong></li>
+                <li>🔥 <strong>TOTAL SCORE:</strong> 315 + 328 + 19 + 50 = <strong>721.2 PTS</strong></li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>

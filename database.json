@@ -103,11 +103,12 @@
         "wickets": "",
         "bowlMatches": "",
         "economy": "",
-        "maidens": "",
         "bbi": "",
         "fourFive": "",
         "catches": "",
-        "stumpings": ""
+        "stumpings": "",
+        "ballsBowled": "",
+        "bowlerStrikeRate": ""
       }
     },
     {
@@ -131,11 +132,12 @@
         "wickets": "",
         "bowlMatches": "",
         "economy": "",
-        "maidens": "",
         "bbi": "",
         "fourFive": "",
         "catches": "142",
-        "stumpings": "42"
+        "stumpings": "42",
+        "ballsBowled": "",
+        "bowlerStrikeRate": ""
       }
     },
     {
@@ -159,11 +161,12 @@
         "wickets": "",
         "bowlMatches": "",
         "economy": "",
-        "maidens": "",
         "bbi": "",
         "fourFive": "",
         "catches": "",
-        "stumpings": ""
+        "stumpings": "",
+        "ballsBowled": "",
+        "bowlerStrikeRate": ""
       }
     },
     {
@@ -187,11 +190,12 @@
         "wickets": "139",
         "bowlMatches": "109",
         "economy": "6.66",
-        "maidens": "4",
         "bbi": "4/24",
         "fourFive": "1/0",
         "catches": "",
-        "stumpings": ""
+        "stumpings": "",
+        "ballsBowled": "",
+        "bowlerStrikeRate": ""
       }
     },
     {
@@ -215,11 +219,12 @@
         "wickets": "53",
         "bowlMatches": "123",
         "economy": "8.8",
-        "maidens": "",
         "bbi": "3/17",
         "fourFive": "0/0",
         "catches": "",
-        "stumpings": ""
+        "stumpings": "",
+        "ballsBowled": "",
+        "bowlerStrikeRate": ""
       }
     },
     {
@@ -239,11 +244,12 @@
         "wickets": "",
         "bowlMatches": "",
         "economy": "",
-        "maidens": "",
         "bbi": "",
         "fourFive": "",
         "catches": "",
-        "stumpings": ""
+        "stumpings": "",
+        "ballsBowled": "",
+        "bowlerStrikeRate": ""
       },
       "status": "upcoming",
       "team": null,
