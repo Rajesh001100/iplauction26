@@ -50,18 +50,18 @@ const soldSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/20
 
 // AI Auctioneer Voice
 function speak(text) {
-  if (!isAudioEnabled) return; 
+  if (!isAudioEnabled) return;
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel(); // Stop any pending speech
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
-    
+
     // Pick a good voice if available
     const voices = window.speechSynthesis.getVoices();
     const premiumVoice = voices.find(v => v.name.includes('Google') || v.name.includes('Premium') || v.name.includes('Male'));
     if (premiumVoice) utterance.voice = premiumVoice;
-    
+
     window.speechSynthesis.speak(utterance);
   }
 }
@@ -168,7 +168,7 @@ socket.on('stateUpdate', (partialState) => {
   const oldBidderId = appState.globalState?.currentBidderId;
 
   appState = { ...appState, ...partialState };
-  
+
   if (partialState.globalState && partialState.globalState.isAudioEnabled !== undefined) {
     isAudioEnabled = partialState.globalState.isAudioEnabled;
     if (audioToggle) audioToggle.checked = isAudioEnabled;
@@ -215,25 +215,25 @@ function updateTimerUI(endTime) {
 
   const now = Date.now();
   const remaining = endTime ? Math.max(0, Math.ceil((endTime - now) / 1000)) : 0;
-  
+
   // Only update if the value actually changed
   if (remaining !== parseInt(timerVal.textContent)) {
     // Prevent overwriting the "Bidding Ended" text if the timer finished
     if (remaining === 0 && timerVal.textContent === "Bidding Ended") return;
 
     timerVal.textContent = remaining > 0 ? remaining : "0";
-    
+
     if (remaining <= 5 && remaining > 0) {
       timerVal.classList.add('timer-low');
     } else {
       timerVal.classList.remove('timer-low');
     }
-    
+
     // Manage bidding buttons
     if (remaining === 0) {
-       document.querySelectorAll('.btn-bid').forEach(btn => btn.disabled = true);
+      document.querySelectorAll('.btn-bid').forEach(btn => btn.disabled = true);
     } else {
-       document.querySelectorAll('.btn-bid').forEach(btn => btn.disabled = false);
+      document.querySelectorAll('.btn-bid').forEach(btn => btn.disabled = false);
     }
   }
 }
@@ -272,17 +272,17 @@ socket.on('auctionTimeout', () => {
 function populateLoginDropdown() {
   const rs = document.getElementById('role');
   if (!rs) return;
-  
+
   let html = `<option value="" disabled selected>Select Role...</option>`;
   html += `<option value="admin">Auctioneer (Admin)</option>`;
-  
+
   if (appState.teams && appState.teams.length > 0) {
     html += `<option disabled>--- Franchises ---</option>`;
     appState.teams.forEach(team => {
       html += `<option value="${team.id}">${team.name}</option>`;
     });
   }
-  
+
   rs.innerHTML = html;
 }
 
@@ -291,7 +291,7 @@ loginForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const pwd = document.getElementById('password').value;
   const roleVal = roleSelect.value;
-  
+
   const loginData = {
     role: roleVal === 'admin' ? 'admin' : 'team',
     teamId: roleVal === 'admin' ? null : roleVal,
@@ -390,7 +390,7 @@ function renderApp() {
 
 function renderLiveAuction() {
   const { activePlayerId, currentBid, currentBidderId, timer } = appState.globalState;
-  
+
   if (!activePlayerId) {
     noActivePlayer.classList.remove('hidden');
     activePlayerCard.classList.add('hidden');
@@ -405,7 +405,7 @@ function renderLiveAuction() {
   const player = appState.players.find(p => p.id === activePlayerId);
   const bidder = currentBidderId ? appState.teams.find(t => t.id === currentBidderId)?.name : 'No bids yet';
   const img = player.img || 'https://images2.imgbox.com/6c/d2/8I1zS2mY_o.png'; // High-res generic placeholder
-  
+
   const stats = player.stats || {};
 
   const getStat = (val) => (val === undefined || val === null || val === '') ? '-' : val;
@@ -486,11 +486,11 @@ function renderLiveAuction() {
   if (teamControlsDisplay) {
     teamControlsDisplay.style.opacity = '1';
     teamControlsDisplay.style.pointerEvents = 'auto';
-    
+
     // Use fixed increments
     const bidBtns = document.querySelectorAll('.btn-bid');
     const fixedIncrements = [10, 20, 50, 100];
-    
+
     bidBtns.forEach((btn, idx) => {
       const inc = fixedIncrements[idx];
       btn.dataset.amount = inc;
@@ -550,8 +550,8 @@ function renderPlayersList() {
       adminAction += `<button class="btn-danger" style="font-size:0.75rem; padding: 4px 8px; margin-left: 5px;" onclick="deletePlayer('${p.id}')">Delete</button>`;
     }
 
-    const img = p.img || 'https://images2.imgbox.com/6c/d2/8I1zS2mY_o.png'; 
-    
+    const img = p.img || 'https://images2.imgbox.com/6c/d2/8I1zS2mY_o.png';
+
     let playerPoints = '';
     if (currentUser.role === 'admin') {
       const score = calculatePlayerScore(p);
@@ -613,14 +613,14 @@ function renderTeamsStats() {
                Overseas: ${overseasCount}/8
             </div>
             <div style="display:flex; gap:10px; align-self:flex-end;">
-               ${(currentUser.role === 'admin' || isMe) ? 
-                 `<button class="btn-outline btn-view-squad" onclick="viewSquad('${t.id}')">View Squad</button>` : 
-                 ''
-               }
-               ${(currentUser.role === 'admin') ? 
-                 `<button class="btn-danger" style="font-size:0.7rem; padding: 4px 8px; margin-top:10px;" onclick="toggleEliminate('${t.id}')">${t.isEliminated ? 'Restore' : 'Eliminate'}</button>` : 
-                 ''
-               }
+               ${(currentUser.role === 'admin' || isMe) ?
+        `<button class="btn-outline btn-view-squad" onclick="viewSquad('${t.id}')">View Squad</button>` :
+        ''
+      }
+               ${(currentUser.role === 'admin') ?
+        `<button class="btn-danger" style="font-size:0.7rem; padding: 4px 8px; margin-top:10px;" onclick="toggleEliminate('${t.id}')">${t.isEliminated ? 'Restore' : 'Eliminate'}</button>` :
+        ''
+      }
             </div>
          </div>
       </div>
@@ -631,7 +631,7 @@ function renderTeamsStats() {
 
 function updateRoleCounts() {
   const playersInTab = appState.players.filter(p => p.status === currentTab);
-  
+
   const counts = {
     all: playersInTab.length,
     Batter: 0,
@@ -648,7 +648,7 @@ function updateRoleCounts() {
     } else {
       counts['Domestic']++;
     }
-    
+
     if (p.role === 'Wicketkeeper') {
       counts['Wicketkeeper-Batsman']++;
     } else if (counts[p.role] !== undefined) {
@@ -675,7 +675,7 @@ tabBtns.forEach(btn => {
 });
 
 // Admin: Start Auction
-window.startAuction = function(playerId) {
+window.startAuction = function (playerId) {
   if (appState.globalState.activePlayerId) {
     alert("An auction is already active. Mark it sold or unsold first.");
     return;
@@ -714,7 +714,7 @@ function updateModalLabels() {
   const isOverseas = pOverseasCheckbox.checked;
   const hasIplExp = pIplExpCheckbox.checked;
   if (!labelBat || !labelBowl || !labelWk) return;
-  
+
   if (hasIplExp) {
     // Any player with IPL experience shows IPL labels
     labelBat.textContent = "IPL Batting Statistics";
@@ -750,7 +750,7 @@ if (btnUndo) {
   });
 }
 
-window.toggleEliminate = function(teamId) {
+window.toggleEliminate = function (teamId) {
   const team = appState.teams.find(t => t.id === teamId);
   if (!team) return;
   const action = team.isEliminated ? 'restore' : 'eliminate';
@@ -769,7 +769,7 @@ if (btnLeaderboard) {
 function calculatePlayerScore(p) {
   const stats = p.stats || {};
   const role = p.role ? p.role.replace('-', '').replace(' ', '') : '';
-  
+
   // Extraction & Parsing
   const runs = parseFloat(stats.runs) || 0;
   const wickets = parseFloat(stats.wickets) || 0;
@@ -806,15 +806,15 @@ function calculatePlayerScore(p) {
 
   // 2. Role Core Score (Normalized Per Match)
   let performanceScore = 0;
-  
+
   // --- Batting Component ---
   if (role.includes('Batter') || role.includes('All') || role.includes('keeper')) {
     const runsPerMatch = runs / matchesSafe;
     const batBase = (runsPerMatch * 4); // Adjusted slightly for boundaries
-    const batEfficiency = (avg * 5) + (sr * 1); 
+    const batEfficiency = (avg * 5) + (sr * 1);
     const milestoneBonus = ((fifties * 50) + (hundreds * 200)) / matchesSafe;
     const boundaryImpact = ((fours * 0.5) + (sixes * 1.5)) / matchesSafe;
-    
+
     performanceScore += batBase + batEfficiency + milestoneBonus + boundaryImpact;
   }
 
@@ -825,7 +825,7 @@ function calculatePlayerScore(p) {
     const bowlEfficiency = (econVal > 0 ? (12 - econVal) * 40 : 0) + (bSrValue > 0 && bSrValue < 24 ? (24 - bSrValue) * 3 : 0);
     const milestoneBonus = ((fourW * 100) + (fiveW * 250)) / matchesSafe;
     const volumeImpact = (ballsValue / 6) / matchesSafe * 2; // Overs per match impact
-    
+
     performanceScore += bowlBase + bowlEfficiency + milestoneBonus + volumeImpact;
   }
 
@@ -845,27 +845,27 @@ function calculatePlayerScore(p) {
   let specialistBonuses = 0;
   if ((role.includes('Batter') || role.includes('All')) && sr > 150) specialistBonuses += 50;
   if (role.includes('Bowler') && econVal < 7.5 && econVal > 0) specialistBonuses += 50;
-  
+
   // High Valuation / MVP potential
   if (p.finalPrice >= 1400) specialistBonuses += 40;
   else if (p.finalPrice >= 800) specialistBonuses += 20;
 
-  return { 
-    performance: finalScore, 
+  return {
+    performance: finalScore,
     specialist: specialistBonuses,
-    total: finalScore + specialistBonuses 
+    total: finalScore + specialistBonuses
   };
 }
 
 function calculateAndShowLeaderboard() {
   const teamsData = appState.teams.map(team => {
     const squad = appState.players.filter(p => p.team === team.id);
-    
+
     // --- Points Calculation Logic (Leaderboard 2.0) ---
     let performanceScore = 0;
     let strategyScore = 0;
     let specialistBonuses = 0;
-    
+
     const counts = { Batter: 0, Bowler: 0, AllRounder: 0, Wicketkeeper: 0, Overseas: 0 };
 
     squad.forEach(p => {
@@ -956,7 +956,7 @@ function calculateAndShowLeaderboard() {
 }
 
 closeLeaderboardBtn.addEventListener('click', () => {
-    leaderboardModal.classList.add('hidden');
+  leaderboardModal.classList.add('hidden');
 });
 
 // --- Analytics Dashboard ---
@@ -1000,11 +1000,11 @@ function showAnalytics() {
 
   // 3. Budget Efficiency (Total Squad Rating / Total Spent)
   const efficientTeam = teamsData.map(t => {
-      const STARTING_BUDGET = 10000;
-      const spent = STARTING_BUDGET - t.budget;
-      // We can take totalScore if we recalculate it here, OR just spend/squadSize ratio for simplicity
-      const efficiency = t.squadSize / (spent || 1); 
-      return { ...t, efficiency };
+    const STARTING_BUDGET = 10000;
+    const spent = STARTING_BUDGET - t.budget;
+    // We can take totalScore if we recalculate it here, OR just spend/squadSize ratio for simplicity
+    const efficiency = t.squadSize / (spent || 1);
+    return { ...t, efficiency };
   }).reduce((prev, curr) => (prev.efficiency > curr.efficiency ? prev : curr), teamsData[0]);
 
   analyticsContainer.innerHTML = `
@@ -1074,7 +1074,7 @@ closePasswordBtn.addEventListener('click', () => {
 function renderPasswordManager() {
   if (!passwordListContainer) return;
   passwordListContainer.innerHTML = '';
-  
+
   if (adminTeamsList.length === 0) {
     passwordListContainer.innerHTML = '<div class="text-muted">Loading team passwords...</div>';
     return;
@@ -1097,10 +1097,10 @@ function renderPasswordManager() {
   });
 }
 
-window.saveNewPassword = function(teamId) {
+window.saveNewPassword = function (teamId) {
   const newPass = document.getElementById(`pass-${teamId}`).value;
   if (!newPass) return alert("Password cannot be empty!");
-  
+
   const team = adminTeamsList.find(t => t.id === teamId);
   if (confirm(`Update password for ${team.name} to "${newPass}"?`)) {
     socket.emit('updateTeamPassword', { teamId, newPassword: newPass });
@@ -1118,50 +1118,65 @@ if (btnResetBids) {
 }
 
 // Admin: Edit Player
-window.editPlayer = function(playerId) {
+window.editPlayer = function (playerId) {
   const p = appState.players.find(pl => pl.id === playerId);
   if (!p) return;
-  document.getElementById('p-id').value = p.id;
-  document.getElementById('p-name').value = p.name;
-  document.getElementById('p-role').value = p.role;
-  document.getElementById('p-baseprice').value = p.basePrice || 50;
-  document.getElementById('p-jersey').value = p.jerseyNumber || '';
-  document.getElementById('p-overseas').checked = !!p.isOverseas;
-  document.getElementById('p-ipl-exp').checked = !!p.hasIplExp;
+
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  };
+  const setChecked = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.checked = val;
+  };
+
+  setVal('p-id', p.id);
+  setVal('p-name', p.name);
+  setVal('p-role', p.role);
+  setVal('p-baseprice', p.basePrice || 50);
+  setVal('p-jersey', p.jerseyNumber || '');
+  setChecked('p-overseas', !!p.isOverseas);
+  setChecked('p-ipl-exp', !!p.hasIplExp);
   updateModalLabels(); // Set correct labels
-  document.getElementById('p-img').value = p.img || '';
+  setVal('p-img', p.img || '');
 
   const stats = p.stats || {};
-  document.getElementById('p-runs').value = stats.runs || '';
-  document.getElementById('p-matches').value = stats.matches || '';
-  document.getElementById('p-fours').value = stats.fours || '';
-  document.getElementById('p-sixes').value = stats.sixes || '';
-  document.getElementById('p-average').value = stats.average || '';
-  document.getElementById('p-strike-rate').value = stats.strikeRate || '';
-  document.getElementById('p-hs').value = stats.hs || '';
-  document.getElementById('p-fifties').value = stats.fiftiesHundreds || '';
+  setVal('p-runs', stats.runs || '');
+  setVal('p-matches', stats.matches || '');
+  setVal('p-fours', stats.fours || '');
+  setVal('p-sixes', stats.sixes || '');
+  setVal('p-average', stats.average || '');
+  setVal('p-strike-rate', stats.strikeRate || '');
+  setVal('p-hs', stats.hs || '');
+  setVal('p-fifties', stats.fiftiesHundreds || '');
 
-  document.getElementById('p-wickets').value = stats.wickets || '';
-  document.getElementById('p-bowl-matches').value = stats.bowlMatches || '';
-  document.getElementById('p-economy').value = stats.economy || '';
-  document.getElementById('p-bowl-balls').value = stats.ballsBowled || '';
-  document.getElementById('p-bowl-sr').value = stats.bowlerStrikeRate || '';
-  document.getElementById('p-bbi').value = stats.bbi || '';
-  document.getElementById('p-four-five').value = stats.fourFive || '';
+  setVal('p-wickets', stats.wickets || '');
+  setVal('p-bowl-matches', stats.bowlMatches || '');
+  setVal('p-economy', stats.economy || '');
+  setVal('p-bowl-balls', stats.ballsBowled || '');
+  setVal('p-bowl-sr', stats.bowlerStrikeRate || '');
+  setVal('p-maidens', stats.maidens || '');
+  setVal('p-bbi', stats.bbi || '');
+  setVal('p-four-five', stats.fourFive || '');
 
-  document.getElementById('p-catches').value = stats.catches || '';
-  document.getElementById('p-stumpings').value = stats.stumpings || '';
+  setVal('p-catches', stats.catches || '');
+  setVal('p-stumpings', stats.stumpings || '');
 
-  document.getElementById('modal-title').innerText = 'Edit Player';
-  document.getElementById('btn-delete-player-modal').classList.remove('hidden');
-  playerModal.classList.remove('hidden');
+  const modalTitle = document.getElementById('modal-title');
+  if (modalTitle) modalTitle.innerText = 'Edit Player';
+
+  const delBtn = document.getElementById('btn-delete-player-modal');
+  if (delBtn) delBtn.classList.remove('hidden');
+
+  if (playerModal) playerModal.classList.remove('hidden');
 };
 
 // Admin: Delete Player
-window.deletePlayer = function(playerId) {
+window.deletePlayer = function (playerId) {
   const p = appState.players.find(pl => pl.id === playerId);
   if (!p) return;
-  
+
   if (confirm(`Are you sure you want to delete ${p.name}? This action cannot be undone.`)) {
     socket.emit('deletePlayer', { playerId });
   }
@@ -1205,7 +1220,7 @@ document.getElementById('btn-unsold').addEventListener('click', () => {
 document.querySelectorAll('.btn-bid').forEach(btn => {
   btn.addEventListener('click', (e) => {
     if (currentUser.role !== 'team') return;
-    
+
     const myTeam = appState.teams.find(t => t.id === currentUser.id);
     if (!myTeam) return;
 
@@ -1216,7 +1231,7 @@ document.querySelectorAll('.btn-bid').forEach(btn => {
 
     const bidAmount = parseInt(e.target.dataset.amount);
     const newTotal = appState.globalState.currentBid + bidAmount;
-    
+
     if (newTotal > myTeam.budget) {
       alert("Insufficient Budget!");
       return;
@@ -1237,10 +1252,29 @@ document.querySelectorAll('.btn-bid').forEach(btn => {
       alert("Squad Limit: Your roster is full (max 25 players)!");
       return;
     }
-    
+
     socket.emit('placeBid', { teamId: currentUser.id, amount: newTotal });
   });
 });
+
+// Bid Base Price Logic
+const btnBidBase = document.getElementById('btn-bid-base');
+if (btnBidBase) {
+  btnBidBase.addEventListener('click', () => {
+    if (currentUser?.role !== 'team') return;
+    const player = appState.players.find(p => p.id === appState.globalState.activePlayerId);
+    if (!player) return;
+
+    // Check if team has enough budget
+    const myTeam = appState.teams.find(t => t.id === currentUser.id);
+    if (player.basePrice > myTeam.budget) {
+      alert("Insufficient Budget!");
+      return;
+    }
+
+    socket.emit('placeBid', { teamId: currentUser.id, amount: player.basePrice });
+  });
+}
 
 // Admin Player Modal
 btnNewPlayer.addEventListener('click', () => {
@@ -1275,92 +1309,7 @@ btnNewPlayer.addEventListener('click', () => {
 
   document.getElementById('modal-title').innerText = 'Add New Player';
   document.getElementById('btn-delete-player-modal').classList.add('hidden');
-  
-  // Load draft if available
-  loadFormDraft();
-  
   playerModal.classList.remove('hidden');
-});
-
-// --- Form Drafting / Persistence ---
-function saveFormDraft() {
-  const id = document.getElementById('p-id').value;
-  if (id) return; // Don't save drafts for Edits, only for New Players
-
-  const draft = {
-    name: document.getElementById('p-name').value,
-    role: document.getElementById('p-role').value,
-    basePrice: document.getElementById('p-baseprice').value,
-    jersey: document.getElementById('p-jersey').value,
-    overseas: document.getElementById('p-overseas').checked,
-    iplExp: document.getElementById('p-ipl-exp').checked,
-    img: document.getElementById('p-img').value,
-    stats: {
-      runs: document.getElementById('p-runs').value,
-      matches: document.getElementById('p-matches').value,
-      fours: document.getElementById('p-fours').value,
-      sixes: document.getElementById('p-sixes').value,
-      average: document.getElementById('p-average').value,
-      strikeRate: document.getElementById('p-strike-rate').value,
-      hs: document.getElementById('p-hs').value,
-      fifties: document.getElementById('p-fifties').value,
-      wickets: document.getElementById('p-wickets').value,
-      bowlMatches: document.getElementById('p-bowl-matches').value,
-      economy: document.getElementById('p-economy').value,
-      ballsBowled: document.getElementById('p-bowl-balls').value,
-      strikeRate: document.getElementById('p-bowl-sr').value,
-      bbi: document.getElementById('p-bbi').value,
-      fourFive: document.getElementById('p-four-five').value,
-      catches: document.getElementById('p-catches').value,
-      stumpings: document.getElementById('p-stumpings').value
-    }
-  };
-  localStorage.setItem('ipl_player_draft', JSON.stringify(draft));
-}
-
-function loadFormDraft() {
-  const data = localStorage.getItem('ipl_player_draft');
-  if (!data) return;
-  try {
-    const draft = JSON.parse(data);
-    document.getElementById('p-name').value = draft.name || '';
-    document.getElementById('p-role').value = draft.role || 'Batter';
-    document.getElementById('p-baseprice').value = draft.basePrice || '50';
-    document.getElementById('p-jersey').value = draft.jersey || '';
-    document.getElementById('p-overseas').checked = !!draft.overseas;
-    document.getElementById('p-ipl-exp').checked = !!draft.iplExp;
-    document.getElementById('p-img').value = draft.img || '';
-    
-    if (draft.stats) {
-      document.getElementById('p-runs').value = draft.stats.runs || '';
-      document.getElementById('p-matches').value = draft.stats.matches || '';
-      document.getElementById('p-fours').value = draft.stats.fours || '';
-      document.getElementById('p-sixes').value = draft.stats.sixes || '';
-      document.getElementById('p-average').value = draft.stats.average || '';
-      document.getElementById('p-strike-rate').value = draft.stats.strikeRate || '';
-      document.getElementById('p-hs').value = draft.stats.hs || '';
-      document.getElementById('p-fifties').value = draft.stats.fifties || '';
-      document.getElementById('p-wickets').value = draft.stats.wickets || '';
-      document.getElementById('p-bowl-matches').value = draft.stats.bowlMatches || '';
-      document.getElementById('p-economy').value = draft.stats.economy || '';
-      document.getElementById('p-bowl-balls').value = draft.stats.ballsBowled || '';
-      document.getElementById('p-bowl-sr').value = draft.stats.strikeRate || '';
-      document.getElementById('p-bbi').value = draft.stats.bbi || '';
-      document.getElementById('p-four-five').value = draft.stats.fourFive || '';
-      document.getElementById('p-catches').value = draft.stats.catches || '';
-      document.getElementById('p-stumpings').value = draft.stats.stumpings || '';
-    }
-    updateModalLabels();
-  } catch(e) { console.error("Failed to load draft"); }
-}
-
-function clearFormDraft() {
-  localStorage.removeItem('ipl_player_draft');
-}
-
-// Add event listeners to all form inputs for auto-save
-playerForm.querySelectorAll('input, select').forEach(el => {
-  el.addEventListener('input', saveFormDraft);
 });
 
 // Admin: Modal Delete Button
@@ -1413,7 +1362,7 @@ playerForm.addEventListener('submit', (e) => {
 
 // --- Squad Logic ---
 // --- Squad Logic ---
-window.viewSquad = function(teamId) {
+window.viewSquad = function (teamId) {
   const team = appState.teams.find(t => t.id === teamId);
   if (!team) return;
 
@@ -1434,13 +1383,13 @@ window.viewSquad = function(teamId) {
       btnEliminate.classList.add('hidden');
     }
   }
-  
+
   const squadPlayers = appState.players.filter(p => p.team === teamId);
   const counts = { Batter: 0, Bowler: 0, 'All-rounder': 0, 'Wicketkeeper-Batsman': 0, 'Wicketkeeper': 0 };
   squadPlayers.forEach(p => {
     if (counts[p.role] !== undefined) counts[p.role]++;
   });
-  
+
   // Wicketkeeper normalization
   const wkTotal = counts['Wicketkeeper-Batsman'] + counts['Wicketkeeper'];
   const arTotal = counts['All-rounder'];
@@ -1488,7 +1437,7 @@ window.viewSquad = function(teamId) {
   `;
 
   squadPlayersList.innerHTML = requirementsHtml;
-  
+
   if (squadPlayers.length === 0) {
     squadPlayersList.innerHTML += '<div class="text-muted" style="padding:20px;text-align:center;">No players bought yet.</div>';
   } else {
@@ -1519,7 +1468,7 @@ closeSquadBtn.addEventListener('click', () => {
 });
 
 window.addEventListener('click', (e) => {
-  if (e.target === squadModal) squadModal.classList.add('hidden');
+  if (squadModal && e.target === squadModal) squadModal.classList.add('hidden');
 });
 
 // --- Sold Animation Logic ---
