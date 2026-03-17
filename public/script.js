@@ -1,3 +1,17 @@
+console.log("Script Version: 1.0.2 (Robust Fix)");
+
+// Global Utility Helpers
+const setVal = (id, val) => {
+  const el = document.getElementById(id);
+  if (el) el.value = val;
+};
+const setChecked = (id, val) => {
+  const el = document.getElementById(id);
+  if (el) el.checked = val;
+};
+const getVal = (id) => document.getElementById(id)?.value || '';
+const isChecked = (id) => document.getElementById(id)?.checked || false;
+
 const socket = io({
   transports: ['websocket', 'polling'],
   upgrade: true,
@@ -1122,15 +1136,6 @@ window.editPlayer = function (playerId) {
   const p = appState.players.find(pl => pl.id === playerId);
   if (!p) return;
 
-  const setVal = (id, val) => {
-    const el = document.getElementById(id);
-    if (el) el.value = val;
-  };
-  const setChecked = (id, val) => {
-    const el = document.getElementById(id);
-    if (el) el.checked = val;
-  };
-
   setVal('p-id', p.id);
   setVal('p-name', p.name);
   setVal('p-role', p.role);
@@ -1138,7 +1143,7 @@ window.editPlayer = function (playerId) {
   setVal('p-jersey', p.jerseyNumber || '');
   setChecked('p-overseas', !!p.isOverseas);
   setChecked('p-ipl-exp', !!p.hasIplExp);
-  updateModalLabels(); // Set correct labels
+  // updateModalLabels(); // Removed missing function
   setVal('p-img', p.img || '');
 
   const stats = p.stats || {};
@@ -1278,15 +1283,6 @@ if (btnBidBase) {
 // Admin Player Modal
 if (btnNewPlayer) {
   btnNewPlayer.addEventListener('click', () => {
-    const setVal = (id, val) => {
-      const el = document.getElementById(id);
-      if (el) el.value = val;
-    };
-    const setChecked = (id, val) => {
-      const el = document.getElementById(id);
-      if (el) el.checked = val;
-    };
-
     setVal('p-id', '');
     setVal('p-name', '');
     setVal('p-role', 'Batter');
@@ -1294,8 +1290,7 @@ if (btnNewPlayer) {
     setVal('p-jersey', '');
     setChecked('p-overseas', false);
     setChecked('p-ipl-exp', false);
-    updateModalLabels(); 
-
+    // updateModalLabels(); // Removed missing function
     setVal('p-img', '');
     setVal('p-runs', '');
     setVal('p-matches', '');
@@ -1328,12 +1323,15 @@ if (btnNewPlayer) {
 }
 
 // Admin: Modal Delete Button
-document.getElementById('btn-delete-player-modal').addEventListener('click', () => {
-  const playerId = document.getElementById('p-id').value;
-  if (!playerId) return;
-  window.deletePlayer(playerId);
-  playerModal.classList.add('hidden');
-});
+const btnDelModal = document.getElementById('btn-delete-player-modal');
+if (btnDelModal) {
+  btnDelModal.addEventListener('click', () => {
+    const playerId = getVal('p-id');
+    if (!playerId) return;
+    window.deletePlayer(playerId);
+    if (playerModal) playerModal.classList.add('hidden');
+  });
+}
 
 closeBtn.addEventListener('click', () => {
   playerModal.classList.add('hidden');
@@ -1374,7 +1372,7 @@ playerForm.addEventListener('submit', (e) => {
   };
 
   socket.emit('updatePlayer', { id, name, role, basePrice, jerseyNumber, isOverseas, hasIplExp, img, stats });
-  if (typeof clearFormDraft === 'function') clearFormDraft(); 
+  // if (typeof clearFormDraft === 'function') clearFormDraft(); // Removed missing function
   playerModal.classList.add('hidden');
 });
 
