@@ -1156,7 +1156,6 @@ window.editPlayer = function (playerId) {
   setVal('p-economy', stats.economy || '');
   setVal('p-bowl-balls', stats.ballsBowled || '');
   setVal('p-bowl-sr', stats.bowlerStrikeRate || '');
-  setVal('p-maidens', stats.maidens || '');
   setVal('p-bbi', stats.bbi || '');
   setVal('p-four-five', stats.fourFive || '');
 
@@ -1277,40 +1276,56 @@ if (btnBidBase) {
 }
 
 // Admin Player Modal
-btnNewPlayer.addEventListener('click', () => {
-  document.getElementById('p-id').value = '';
-  document.getElementById('p-name').value = '';
-  document.getElementById('p-role').value = 'Batter';
-  document.getElementById('p-baseprice').value = '50';
-  document.getElementById('p-jersey').value = '';
-  document.getElementById('p-overseas').checked = false;
-  document.getElementById('p-ipl-exp').checked = false;
-  updateModalLabels(); // Reset labels to Domestic by default
-  document.getElementById('p-img').value = '';
+if (btnNewPlayer) {
+  btnNewPlayer.addEventListener('click', () => {
+    const setVal = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val;
+    };
+    const setChecked = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.checked = val;
+    };
 
-  document.getElementById('p-runs').value = '';
-  document.getElementById('p-matches').value = '';
-  document.getElementById('p-fours').value = '';
-  document.getElementById('p-sixes').value = '';
-  document.getElementById('p-average').value = '';
-  document.getElementById('p-strike-rate').value = '';
-  document.getElementById('p-hs').value = '';
-  document.getElementById('p-fifties').value = '';
+    setVal('p-id', '');
+    setVal('p-name', '');
+    setVal('p-role', 'Batter');
+    setVal('p-baseprice', '50');
+    setVal('p-jersey', '');
+    setChecked('p-overseas', false);
+    setChecked('p-ipl-exp', false);
+    updateModalLabels(); 
 
-  document.getElementById('p-wickets').value = '';
-  document.getElementById('p-bowl-matches').value = '';
-  document.getElementById('p-economy').value = '';
-  document.getElementById('p-maidens').value = '';
-  document.getElementById('p-bbi').value = '';
-  document.getElementById('p-four-five').value = '';
+    setVal('p-img', '');
+    setVal('p-runs', '');
+    setVal('p-matches', '');
+    setVal('p-fours', '');
+    setVal('p-sixes', '');
+    setVal('p-average', '');
+    setVal('p-strike-rate', '');
+    setVal('p-hs', '');
+    setVal('p-fifties', '');
 
-  document.getElementById('p-catches').value = '';
-  document.getElementById('p-stumpings').value = '';
+    setVal('p-wickets', '');
+    setVal('p-bowl-matches', '');
+    setVal('p-economy', '');
+    setVal('p-bowl-balls', '');
+    setVal('p-bowl-sr', '');
+    setVal('p-bbi', '');
+    setVal('p-four-five', '');
 
-  document.getElementById('modal-title').innerText = 'Add New Player';
-  document.getElementById('btn-delete-player-modal').classList.add('hidden');
-  playerModal.classList.remove('hidden');
-});
+    setVal('p-catches', '');
+    setVal('p-stumpings', '');
+
+    const modalTitle = document.getElementById('modal-title');
+    if (modalTitle) modalTitle.innerText = 'Add New Player';
+    
+    const delBtn = document.getElementById('btn-delete-player-modal');
+    if (delBtn) delBtn.classList.add('hidden');
+    
+    if (playerModal) playerModal.classList.remove('hidden');
+  });
+}
 
 // Admin: Modal Delete Button
 document.getElementById('btn-delete-player-modal').addEventListener('click', () => {
@@ -1326,37 +1341,40 @@ closeBtn.addEventListener('click', () => {
 
 playerForm.addEventListener('submit', (e) => {
   e.preventDefault();
-  const id = document.getElementById('p-id').value;
-  const name = document.getElementById('p-name').value;
-  const role = document.getElementById('p-role').value;
-  const basePrice = parseInt(document.getElementById('p-baseprice').value);
-  const jerseyNumber = document.getElementById('p-jersey').value;
-  const isOverseas = document.getElementById('p-overseas').checked;
-  const hasIplExp = document.getElementById('p-ipl-exp').checked;
-  const img = document.getElementById('p-img').value;
+  const getVal = (id) => document.getElementById(id)?.value || '';
+  const isChecked = (id) => document.getElementById(id)?.checked || false;
+
+  const id = getVal('p-id');
+  const name = getVal('p-name');
+  const role = getVal('p-role');
+  const basePrice = parseInt(getVal('p-baseprice')) || 50;
+  const jerseyNumber = getVal('p-jersey');
+  const isOverseas = isChecked('p-overseas');
+  const hasIplExp = isChecked('p-ipl-exp');
+  const img = getVal('p-img');
 
   const stats = {
-    runs: document.getElementById('p-runs').value,
-    matches: document.getElementById('p-matches').value,
-    fours: document.getElementById('p-fours').value,
-    sixes: document.getElementById('p-sixes').value,
-    average: document.getElementById('p-average').value,
-    strikeRate: document.getElementById('p-strike-rate').value,
-    hs: document.getElementById('p-hs').value,
-    fiftiesHundreds: document.getElementById('p-fifties').value,
-    wickets: document.getElementById('p-wickets').value,
-    bowlMatches: document.getElementById('p-bowl-matches').value,
-    economy: document.getElementById('p-economy').value,
-    ballsBowled: document.getElementById('p-bowl-balls').value,
-    bowlerStrikeRate: document.getElementById('p-bowl-sr').value,
-    bbi: document.getElementById('p-bbi').value,
-    fourFive: document.getElementById('p-four-five').value,
-    catches: document.getElementById('p-catches').value,
-    stumpings: document.getElementById('p-stumpings').value
+    runs: getVal('p-runs'),
+    matches: getVal('p-matches'),
+    fours: getVal('p-fours'),
+    sixes: getVal('p-sixes'),
+    average: getVal('p-average'),
+    strikeRate: getVal('p-strike-rate'),
+    hs: getVal('p-hs'),
+    fiftiesHundreds: getVal('p-fifties'),
+    wickets: getVal('p-wickets'),
+    bowlMatches: getVal('p-bowl-matches'),
+    economy: getVal('p-economy'),
+    ballsBowled: getVal('p-bowl-balls'),
+    bowlerStrikeRate: getVal('p-bowl-sr'),
+    bbi: getVal('p-bbi'),
+    fourFive: getVal('p-four-five'),
+    catches: getVal('p-catches'),
+    stumpings: getVal('p-stumpings')
   };
 
   socket.emit('updatePlayer', { id, name, role, basePrice, jerseyNumber, isOverseas, hasIplExp, img, stats });
-  clearFormDraft(); // Clear draft on successful submit
+  if (typeof clearFormDraft === 'function') clearFormDraft(); 
   playerModal.classList.add('hidden');
 });
 
