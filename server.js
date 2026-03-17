@@ -301,6 +301,7 @@ io.on('connection', (socket) => {
           seconds: db.globalState.timer,
           endTime: db.globalState.timerEndTime
         });
+        io.emit('stateUpdate', { globalState: db.globalState });
       }
     }
   });

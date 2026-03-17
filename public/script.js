@@ -233,7 +233,7 @@ function updateTimerUI(endTime) {
   // Unlock UI if time is added after a timeout
   if (remaining > 0) {
     const auctionControlsDisplay = document.getElementById('team-controls');
-    if (auctionControlsDisplay && auctionControlsDisplay.style.pointerEvents === 'none') {
+    if (auctionControlsDisplay && (auctionControlsDisplay.style.pointerEvents === 'none' || auctionControlsDisplay.style.opacity === '0.5')) {
       auctionControlsDisplay.style.opacity = '1';
       auctionControlsDisplay.style.pointerEvents = 'auto';
     }
@@ -253,10 +253,11 @@ function updateTimerUI(endTime) {
     }
 
     // Manage bidding buttons
+    const bidButtons = document.querySelectorAll('.btn-bid, #btn-bid-base');
     if (remaining === 0) {
-      document.querySelectorAll('.btn-bid').forEach(btn => btn.disabled = true);
+      bidButtons.forEach(btn => btn.disabled = true);
     } else {
-      document.querySelectorAll('.btn-bid').forEach(btn => btn.disabled = false);
+      bidButtons.forEach(btn => btn.disabled = false);
     }
   }
 }
@@ -279,7 +280,7 @@ socket.on('timerUpdate', (data) => {
 
 socket.on('auctionTimeout', () => {
   if (clientTimerInterval) clearInterval(clientTimerInterval);
-  document.querySelectorAll('.btn-bid').forEach(btn => btn.disabled = true);
+  document.querySelectorAll('.btn-bid, #btn-bid-base').forEach(btn => btn.disabled = true);
   const timerVal = document.getElementById('timer-value');
   if (timerVal) {
     timerVal.textContent = "Bidding Ended";
@@ -520,7 +521,9 @@ function renderLiveAuction() {
       btn.textContent = `+ ${formatMoney(inc)}`;
     });
   }
-  document.querySelectorAll('.btn-bid').forEach(btn => btn.disabled = false);
+  document.querySelectorAll('.btn-bid, #btn-bid-base').forEach(btn => {
+    btn.disabled = appState.globalState.timer === 0;
+  });
 }
 
 function renderPlayersList() {
