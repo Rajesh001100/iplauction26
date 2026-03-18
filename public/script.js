@@ -635,7 +635,7 @@ function renderTeamsStats() {
             </div>
             <div class="team-stats">
                <span style="font-weight:600; color:${isOver75 ? 'var(--success)' : 'var(--danger)'}">Spent: ${pctSpent}%</span> | 
-               Roster: ${t.players.length}/25 | 
+               Roster: ${t.players.length}/18 | 
                Overseas: ${overseasCount}/8
             </div>
             <div style="display:flex; gap:10px; align-self:flex-end;">
@@ -1264,8 +1264,8 @@ document.querySelectorAll('.btn-bid').forEach(btn => {
       }
     }
 
-    if (myTeam.players.length >= 25) {
-      alert("Squad Limit: Your roster is full (max 25 players)!");
+    if (myTeam.players.length >= 18) {
+      alert("Squad Limit: Your roster is full (18 players)!");
       return;
     }
 
@@ -1465,8 +1465,8 @@ window.viewSquad = function (teamId) {
 
   squadSummary.innerHTML = `
     <div class="summary-item">
-      <span class="summary-val" style="color: ${squadPlayers.length >= 18 ? 'var(--success)' : 'var(--danger)'}">${squadPlayers.length}/25</span>
-      <span class="summary-lbl">Roster (Min 18)</span>
+      <span class="summary-val" style="color: ${squadPlayers.length === 18 ? 'var(--success)' : 'var(--primary)'}">${squadPlayers.length}/18</span>
+      <span class="summary-lbl">Squad Reached</span>
     </div>
     <div class="summary-item">
       <span class="summary-val" style="color: ${overseasCount <= 8 ? 'var(--primary)' : 'var(--danger)'}">${overseasCount}/8</span>

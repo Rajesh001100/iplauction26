@@ -212,9 +212,9 @@ io.on('connection', (socket) => {
         const team = db.teams.find(t => t.id === db.globalState.currentBidderId);
 
         if (player && team) {
-          // Strict Squad Limit Check (max 25)
-          if (team.players.length >= 25) {
-            socket.emit('auctionError', `Cannot sell player! ${team.name} already has a maximum of 25 players.`);
+          // Strict Squad Limit Check (Fixed 18)
+          if (team.players.length >= 18) {
+            socket.emit('auctionError', `Cannot sell player! ${team.name} already has their full squad of 18 players.`);
             return;
           }
 
