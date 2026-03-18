@@ -1352,11 +1352,25 @@ closeBtn.addEventListener('click', () => {
 
 playerForm.addEventListener('submit', (e) => {
   e.preventDefault();
+  const submitBtn = playerForm.querySelector('button[type="submit"]');
+  const originalBtnText = submitBtn.innerText;
+  
+  // Basic validation
+  const name = document.getElementById('p-name')?.value;
+  if (!name) {
+    alert("Player name is required!");
+    return;
+  }
+
+  // Loading state
+  submitBtn.disabled = true;
+  submitBtn.innerText = "Saving...";
+
   const getVal = (id) => document.getElementById(id)?.value || '';
   const isChecked = (id) => document.getElementById(id)?.checked || false;
 
   const id = getVal('p-id');
-  const name = getVal('p-name');
+  const playerName = getVal('p-name');
   const role = getVal('p-role');
   const basePrice = parseInt(getVal('p-baseprice')) || 50;
   const jerseyNumber = getVal('p-jersey');
@@ -1384,9 +1398,14 @@ playerForm.addEventListener('submit', (e) => {
     stumpings: getVal('p-stumpings')
   };
 
-  socket.emit('updatePlayer', { id, name, role, basePrice, jerseyNumber, isOverseas, hasIplExp, img, stats });
-  // if (typeof clearFormDraft === 'function') clearFormDraft(); // Removed missing function
-  playerModal.classList.add('hidden');
+  socket.emit('updatePlayer', { id, name: playerName, role, basePrice, jerseyNumber, isOverseas, hasIplExp, img, stats });
+  
+  // Reset loading state after a short delay (server will broadcast stateUpdate anyway)
+  setTimeout(() => {
+    submitBtn.disabled = false;
+    submitBtn.innerText = originalBtnText;
+    playerModal.classList.add('hidden');
+  }, 500);
 });
 
 // --- Squad Logic ---

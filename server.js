@@ -4,6 +4,19 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
+const https = require('https');
+
+// Keep-alive mechanism to prevent Render from sleeping (best-effort)
+const RENDER_URL = process.env.RENDER_EXTERNAL_URL || 'https://yugenfestmegaiplauction2k26.onrender.com';
+if (RENDER_URL) {
+  setInterval(() => {
+    https.get(RENDER_URL, (res) => {
+      console.log(`Keep-alive ping to ${RENDER_URL}: ${res.statusCode}`);
+    }).on('error', (err) => {
+      console.error(`Keep-alive error: ${err.message}`);
+    });
+  }, 10 * 60 * 1000); // 10 minutes
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -374,7 +387,7 @@ io.on('connection', (socket) => {
       } else {
         const newPlayer = {
           ...playerData,
-          id: 'p' + (db.players.length + 1),
+          id: 'p' + Date.now(),
           status: 'upcoming'
         };
         db.players.push(newPlayer);
