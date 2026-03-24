@@ -66,15 +66,26 @@ const soldSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/20
 function speak(text) {
   if (!isAudioEnabled) return;
   if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel(); // Stop any pending speech
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
+    // Phonetic cleanup for currency and units
+    let speechText = text
+      .replace(/₹/g, '')
+      .replace(/\bCr\b/g, 'Crore')
+      .replace(/\bL\b/g, 'Lakh');
 
-    // Pick a good voice if available
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(speechText);
+    utterance.rate = 0.9; // Slightly slower for better clarity
+    utterance.pitch = 1.0;
+    utterance.lang = 'en-IN'; // Prefer Indian English for names/currency
+
     const voices = window.speechSynthesis.getVoices();
-    const premiumVoice = voices.find(v => v.name.includes('Google') || v.name.includes('Premium') || v.name.includes('Male'));
-    if (premiumVoice) utterance.voice = premiumVoice;
+    // Prioritize natural Indian English voices
+    const preferredVoice = voices.find(v => v.lang === 'en-IN' && (v.name.includes('Google') || v.name.includes('Premium')))
+      || voices.find(v => v.name.includes('Google') || v.name.includes('Premium'))
+      || voices.find(v => v.name.includes('Male'))
+      || voices[0];
+
+    if (preferredVoice) utterance.voice = preferredVoice;
 
     window.speechSynthesis.speak(utterance);
   }
@@ -192,7 +203,7 @@ socket.on('stateUpdate', (partialState) => {
   if (appState.globalState.currentBid > oldBid && appState.globalState.currentBidderId !== oldBidderId) {
     const bidder = appState.teams.find(t => t.id === appState.globalState.currentBidderId);
     if (bidder) {
-      speak(`${bidder.name} bids ${formatMoney(appState.globalState.currentBid)}`);
+      speak(`${bidder.name}, bids, ${formatMoney(appState.globalState.currentBid)}`);
     }
   }
 
@@ -224,7 +235,7 @@ socket.on('acceleratedRoundResult', (res) => {
 
 socket.on('playerSold', (data) => {
   soldSound.play().catch(e => console.log("Sound play failed", e));
-  speak(`${data.player.name} is SOLD to ${data.team.name} for ${formatMoney(data.price)}!`);
+  speak(`${data.player.name}, is SOLD to, ${data.team.name}, for ${formatMoney(data.price)}!`);
   showSoldAnimation(data);
 });
 

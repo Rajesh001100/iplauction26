@@ -42,7 +42,7 @@ let db = {
     activePlayerId: null,
     currentBid: 0,
     currentBidderId: null,
-    timer: 5, // Default 5s
+    timer: 10, // Default 10s
     isTimerRunning: false,
     isAudioEnabled: true
   }
@@ -58,7 +58,7 @@ function saveHistory() {
 let timerInterval = null;
 function startTimer() {
   stopTimer();
-  db.globalState.timer = 5; // 5 seconds
+  db.globalState.timer = 10; // 10 seconds
   db.globalState.timerEndTime = Date.now() + (db.globalState.timer * 1000);
   continueTimer();
 }
