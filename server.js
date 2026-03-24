@@ -42,7 +42,7 @@ let db = {
     activePlayerId: null,
     currentBid: 0,
     currentBidderId: null,
-    timer: 15, // Default 15s
+    timer: 5, // Default 5s
     isTimerRunning: false,
     isAudioEnabled: true
   }
@@ -58,7 +58,7 @@ function saveHistory() {
 let timerInterval = null;
 function startTimer() {
   stopTimer();
-  db.globalState.timer = 15; // 15 seconds
+  db.globalState.timer = 5; // 5 seconds
   db.globalState.timerEndTime = Date.now() + (db.globalState.timer * 1000);
   continueTimer();
 }
@@ -184,6 +184,11 @@ io.on('connection', (socket) => {
 
       const player = db.players.find(p => p.id === db.globalState.activePlayerId);
       if (!player) return;
+
+      if (teamId === db.globalState.currentBidderId) {
+        socket.emit('auctionError', 'You are already the highest bidder!');
+        return;
+      }
 
       if ((amount > db.globalState.currentBid || (amount === db.globalState.currentBid && !db.globalState.currentBidderId)) && amount <= team.budget) {
         db.globalState.currentBid = amount;
@@ -355,7 +360,7 @@ io.on('connection', (socket) => {
     const team = db.teams.find(t => t.id === teamId);
     if (team) {
       team.isEliminated = !team.isEliminated;
-      await supabase.from('teams').update({ isEliminated: team.isEliminated }).eq('id', teamId);
+      // Removed Supabase update as isEliminated column is missing
       io.emit('stateUpdate', { teams: db.teams });
     }
   });
@@ -444,8 +449,7 @@ io.on('connection', (socket) => {
         }).neq('id', 'all_reset_placeholder'),
         supabase.from('teams').update({
           budget: 10000,
-          players: [],
-          isEliminated: false
+          players: []
         }).neq('id', 'all_reset_placeholder')
       ]);
       console.log('Auction reset successfully in Supabase');

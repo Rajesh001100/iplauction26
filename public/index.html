@@ -86,6 +86,7 @@
            <div id="team-controls" class="hidden">
              <h3>Place Bid</h3>
              <div class="bid-actions">
+               <button class="btn-bid" data-amount="5">+ ₹5</button>
                <button class="btn-bid" data-amount="10">+ ₹10</button>
                <button class="btn-bid" data-amount="20">+ ₹20</button>
                <button class="btn-bid" data-amount="50">+ ₹50</button>
@@ -321,81 +322,90 @@
       
       <div class="rules-scroll scroll-list" style="max-height: 70vh;">
         <div class="rule-section">
-          <h3 style="color: var(--primary); margin-bottom: 10px;">1. Squad Requirements</h3>
-          <ul style="list-style: none; padding-left: 0; color: var(--text-main);">
-            <li>✅ <strong>Minimum Squad:</strong> 18 players (Penalty: <span style="color: var(--danger);">-50 pts</span> if below)</li>
-            <li>✅ <strong>Maximum Squad:</strong> 25 players per franchise</li>
-            <li>✅ <strong>Overseas Limit:</strong> Max 8 international players</li>
-          </ul>
+          <h3 style="color: var(--primary); margin-bottom: 10px;">📉 WHY IS MY SCORE NEGATIVE?</h3>
+          <div class="glass-panel" style="background: rgba(239, 68, 68, 0.1); padding: 15px; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2); margin-bottom: 20px;">
+            <p style="font-size: 0.95rem; line-height: 1.5; color: #fecaca;">
+              Every franchise starts the auction at <strong>-140.0 Points</strong> because you begin with <strong>Strategic Penalties</strong> that must be cleared by building your squad:
+            </p>
+            <ul style="list-style: none; padding-left: 0; margin-top: 10px; font-size: 0.85rem; color: #fca5a5; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <li>❌ <strong>Under-size Squad:</strong> <strong style="color:var(--danger)">-100 PTS</strong><br><span style="font-size:0.7rem; opacity:0.8;">(Cleared only when you reach 18 players)</span></li>
+              <li>❌ <strong>Low Spend Alert:</strong> <strong style="color:var(--danger)">-100 PTS</strong><br><span style="font-size:0.7rem; opacity:0.8;">(Cleared when you spend ₹7,500L+)</span></li>
+              <li>❌ <strong>Empty Roster:</strong> <strong style="color:var(--danger)">-40 PTS</strong><br><span style="font-size:0.7rem; opacity:0.8;">(-10 pts for each of the 4 role groups missing)</span></li>
+              <li>💰 <strong>Budget Bonus:</strong> <strong style="color:var(--success)">+100 PTS</strong><br><span style="font-size:0.7rem; opacity:0.8;">(Starting bonus for ₹10,000L remaining)</span></li>
+            </ul>
+            <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-top: 15px; border-left: 3px solid var(--success);">
+              <p style="font-size: 0.85rem; color: #f3f4f6; margin-bottom: 5px;">🔥 <strong>HOW TO OVERCOME:</strong></p>
+              <p style="font-size: 0.8rem; color: #d1d5db; line-height: 1.4;">
+                Buy players! Each buy reduces the <strong>Budget Bonus</strong>, but as you reach <strong>6 Batters, 6 Bowlers, 3 ARs, and 2 WKs</strong>, the -40 penalty disappears and turns into <strong>+60 Bonus Points</strong>. Reach 18 players and spend ₹7,500L to clear the big -200 gap!
+              </p>
+            </div>
+          </div>
         </div>
 
         <div class="rule-section" style="margin-top: 20px;">
-          <h3 style="color: var(--primary); margin-bottom: 10px;">2. Ideal Composition (Scoring Bonus)</h3>
-          <p style="font-size: 0.9rem; margin-bottom: 5px;">Build a balanced squad to earn maximum points:</p>
-          <ul style="list-style: none; padding-left: 0; color: var(--text-main);">
-            <li>🏏 <strong>6+ Batters:</strong> <span style="background: var(--success); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 0.75rem;">+15 PTS</span></li>
-            <li>🏐 <strong>6+ Bowlers:</strong> <span style="background: var(--success); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 0.75rem;">+15 PTS</span></li>
-            <li>⚡ <strong>3+ All-Rounders:</strong> <span style="background: var(--success); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 0.75rem;">+15 PTS</span></li>
-            <li>🧤 <strong>2+ Wicketkeepers:</strong> <span style="background: var(--success); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 0.75rem;">+15 PTS</span></li>
-            <li>🏆 <strong>Complete Squad Bonus:</strong> <span style="background: var(--primary); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 0.75rem;">+25 PTS</span></li>
-          </ul>
-        </div>
-
-        <div class="rule-section" style="margin-top: 20px;">
-          <h3 style="color: var(--primary); margin-bottom: 10px;">3. Bidding Rules</h3>
-          <ul style="list-style: none; padding-left: 0; color: var(--text-main);">
-            <li>💰 <strong>Starting Budget:</strong> ₹10,000 Lakhs (₹100 Crore).</li>
-            <li>⏱️ <strong>Timer:</strong> 15 seconds. Resets on every new bid.</li>
-            <li>💸 <strong>Mandatory Spend:</strong> Each franchise must spend at least <strong>75% (₹7,500L)</strong> of their budget.</li>
-            <li>⚖️ <strong>Bid Increments:</strong> Use provided buttons (+10, +20, etc.).</li>
-            <li>🚫 <strong>Elimination:</strong> Auctioneer can eliminate teams for misconduct.</li>
-          </ul>
-        </div>
-
-        <div class="rule-section" style="margin-top: 20px;">
-          <h2 style="text-align: center; color: var(--primary); margin-bottom: 20px;">📜 WINNER'S FLASHCARDS (PSBE 6.1 - DEEP EQUITY)</h2>
+          <h2 style="text-align: center; color: var(--primary); margin-bottom: 25px;">🏆 THE "PSBE" WINNER'S SYSTEM</h2>
           
-          <!-- Card 1 -->
-          <div class="glass-panel" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid var(--primary);">
-            <h3 style="color: var(--primary); margin-bottom: 8px;">🗂️ CARD 1: PERFORMANCE (The "P")</h3>
+          <!-- Card 1: P -->
+          <div class="glass-panel" style="background: rgba(59, 130, 246, 0.05); padding: 20px; border-radius: 15px; margin-bottom: 20px; border-left: 5px solid #3b82f6; position: relative; overflow: hidden;">
+            <div style="position: absolute; right: -10px; top: -10px; font-size: 5rem; opacity: 0.05; color: #3b82f6; font-weight: 900;">P</div>
+            <h3 style="color: #3b82f6; margin-bottom: 12px; display: flex; align-items: center; gap: 10px;">🗂️ CARD 1: PERFORMANCE (The "P")</h3>
+            <ul style="list-style: none; padding-left: 0; font-size: 0.9rem; line-height: 1.8; color: var(--text-main);">
               <li>✅ <strong>Normalization:</strong> Scores are calculated <strong>Per Match</strong>. Modern stars can now compete with legends.</li>
               <li>🏏 <strong>Batters:</strong> Points for <strong>Runs/m</strong>, <strong>Avg (5x)</strong>, <strong>S/R (1x)</strong>, and <strong>Boundaries</strong>.</li>
               <li>🏐 <strong>Bowlers:</strong> Points for <strong>Wickets/m</strong>, <strong>Economy</strong>, and <strong>Strike Rate</strong>.</li>
               <li>🧤 <strong>Keepers:</strong> Performance points for <strong>Catches</strong> and <strong>Stumpings</strong> (normalized).</li>
               <li>⚡ <strong>Experience:</strong> Experience (100+ matches) adds a <strong>Logarithmic Stability Bonus</strong>.</li>
-              <li>❌ <strong>Confidence:</strong> Small discount (< 15% ) for players with <strong>< 10 matches</strong> due to volatility.</li>
+              <li>❌ <strong>Confidence:</strong> Small discount (&lt; 15%) for players with <strong>&lt; 10 matches</strong> due to volatility.</li>
+            </ul>
           </div>
 
-          <!-- Card 2 -->
-          <div class="glass-panel" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid var(--success);">
-            <h3 style="color: var(--success); margin-bottom: 8px;">🗂️ CARD 2: STRATEGY (The "S")</h3>
-            <p style="font-size: 0.9rem; margin-bottom: 5px;"><strong>Is your squad balanced?</strong></p>
-            <ul style="list-style: none; padding-left: 0; font-size: 0.85rem; line-height: 1.6;">
-              <li>🌍 <strong>Magic 8:</strong> Get exactly <strong>8 International players</strong> (+30 pts).</li>
+          <!-- Card 2: S -->
+          <div class="glass-panel" style="background: rgba(16, 185, 129, 0.05); padding: 20px; border-radius: 15px; margin-bottom: 20px; border-left: 5px solid #10b981; position: relative; overflow: hidden;">
+            <div style="position: absolute; right: -10px; top: -10px; font-size: 5rem; opacity: 0.05; color: #10b981; font-weight: 900;">S</div>
+            <h3 style="color: #10b981; margin-bottom: 12px; display: flex; align-items: center; gap: 10px;">🗂️ CARD 2: STRATEGY (The "S")</h3>
+            <p style="font-weight: 700; color: #a7f3d0; margin-bottom: 10px;">Is your squad balanced?</p>
+            <ul style="list-style: none; padding-left: 0; font-size: 0.9rem; line-height: 1.8; color: var(--text-main);">
+              <li>🌍 <strong>Magic 8:</strong> Get exactly <strong>8 International players</strong> <span style="background:var(--success); color:#000; padding:2px 6px; border-radius:4px; font-weight:800; font-size:0.75rem;">+30 PTS</span>.</li>
               <li>👥 <strong>Roles:</strong> Need <strong>6 Batters, 6 Bowlers, 3 All-rounders, 2 Keepers</strong>.</li>
-              <li>🏆 <strong>Met All Req:</strong> Get <strong style="color:var(--success)">+75 pts</strong> for a perfectly balanced squad!</li>
+              <li>🏆 <strong>Met All Req:</strong> Get <strong style="color:var(--success)">+75 PTS</strong> for a perfectly balanced squad!</li>
+              <li>⚠️ <strong>Strict 18:</strong> Must reach <strong>exactly 18 players</strong> to avoid the <strong style="color:var(--danger)">-100 PTS</strong> penalty.</li>
             </ul>
           </div>
 
-          <!-- Card 3 -->
-          <div class="glass-panel" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid #00c6ff;">
-            <h3 style="color: #00c6ff; margin-bottom: 8px;">🗂️ CARD 3: BUDGET (The "B")</h3>
-            <p style="font-size: 0.9rem; margin-bottom: 5px;"><strong>Are you good with money?</strong></p>
-            <ul style="list-style: none; padding-left: 0; font-size: 0.85rem; line-height: 1.6;">
-              <li>💰 <strong>Mandatory Spend:</strong> Spend at least **75% (₹7,500L)**.</li>
-              <li>📉 <strong>Penalty:</strong> Spending < 75% = <strong style="color:var(--danger)">-50 points</strong>.</li>
-              <li>💎 <strong>Efficiency:</strong> Saving money *after* the 75% limit gives bonus points.</li>
+          <!-- Card 3: B -->
+          <div class="glass-panel" style="background: rgba(245, 158, 11, 0.05); padding: 20px; border-radius: 15px; margin-bottom: 20px; border-left: 5px solid #f59e0b; position: relative; overflow: hidden;">
+            <div style="position: absolute; right: -10px; top: -10px; font-size: 5rem; opacity: 0.05; color: #f59e0b; font-weight: 900;">B</div>
+            <h3 style="color: #f59e0b; margin-bottom: 12px; display: flex; align-items: center; gap: 10px;">🗂️ CARD 3: BUDGET (The "B")</h3>
+            <p style="font-weight: 700; color: #fde68a; margin-bottom: 10px;">Are you good with money?</p>
+            <ul style="list-style: none; padding-left: 0; font-size: 0.9rem; line-height: 1.8; color: var(--text-main);">
+              <li>💰 <strong>Mandatory Spend:</strong> Spend at least <strong>75% (₹7,500L)</strong>.</li>
+              <li>📉 <strong>Penalty:</strong> Spending &lt; 75% = <strong style="color:var(--danger)">-100 PTS</strong>.</li>
+              <li>💎 <strong>Efficiency:</strong> Saving money <em>after</em> the 75% limit gives bonus points (+1 pt per ₹100L saved).</li>
             </ul>
           </div>
 
-          <!-- Card 4 -->
-          <div class="glass-panel" style="background: rgba(212, 175, 55, 0.1); padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px dashed var(--primary);">
-            <h3 style="color: var(--primary); margin-bottom: 8px;">🗂️ CARD 4: WINNING TIPS</h3>
-            <ul style="list-style: none; padding-left: 0; font-size: 0.85rem; line-height: 1.6;">
-              <li>🌟 <strong>MVP Bonus:</strong> Any ₹14 Cr+ player gives **+40 bonus pts** for match-winning potential.</li>
-              <li>⚡ <strong>Power Player:</strong> Batters with **150+ S/R** or Bowlers with **<7.5 Econ** earn **+50 PTS**.</li>
+          <!-- Card 4: E -->
+          <div class="glass-panel" style="background: rgba(139, 92, 246, 0.05); padding: 20px; border-radius: 15px; margin-bottom: 20px; border-left: 5px solid #8b5cf6; position: relative; overflow: hidden;">
+            <div style="position: absolute; right: -10px; top: -10px; font-size: 5rem; opacity: 0.05; color: #8b5cf6; font-weight: 900;">E</div>
+            <h3 style="color: #8b5cf6; margin-bottom: 12px; display: flex; align-items: center; gap: 10px;">🗂️ CARD 4: EXPERTISE (The "E")</h3>
+            <ul style="list-style: none; padding-left: 0; font-size: 0.9rem; line-height: 1.8; color: var(--text-main);">
+              <li>🌟 <strong>MVP Bonus:</strong> Any ₹14 Cr+ player gives <strong style="color:var(--success)">+40 bonus pts</strong> for match-winning potential.</li>
+              <li>⚡ <strong>Power Player:</strong> Batters with <strong>150+ S/R</strong> or Bowlers with <strong>&lt; 7.5 Econ</strong> earn <strong style="color:var(--success)">+50 PTS</strong>.</li>
+              <li>📈 <strong>Tiered Valuation:</strong> Players sold for ₹8 Cr - ₹13.9 Cr earn a <strong style="color:var(--success)">+20 PTS</strong> quality bonus.</li>
             </ul>
           </div>
+
+          <!-- Card 5: Winning Tips -->
+          <div class="glass-panel" style="background: rgba(236, 72, 153, 0.05); padding: 20px; border-radius: 15px; margin-bottom: 20px; border-left: 5px solid #ec4899; position: relative; overflow: hidden;">
+            <div style="position: absolute; right: -10px; top: -10px; font-size: 5rem; opacity: 0.05; color: #ec4899; font-weight: 900;">!</div>
+            <h3 style="color: #ec4899; margin-bottom: 12px; display: flex; align-items: center; gap: 10px;">🗂️ CARD 5: WINNING TIPS</h3>
+            <ul style="list-style: none; padding-left: 0; font-size: 0.9rem; line-height: 1.8; color: var(--text-main);">
+              <li>💡 <strong>Don't Wait:</strong> Buy early to clear the <strong style="color:var(--danger)">-200 initial penalties</strong> quickly.</li>
+              <li>⚖️ <strong>Overseas Lock:</strong> Aim for exactly 8 International players early to secure the <strong style="color:var(--success)">+30 PT</strong> bonus.</li>
+              <li>💰 <strong>Budget Trap:</strong> Don't leave too much money! Saving ₹1,000L gives only +10 pts, but a star player can give +100+ pts.</li>
+            </ul>
+          </div>
+        </div>
 
           <!-- Card 5 (Examples) -->
           <div class="glass-panel" style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; border-left: 4px solid #00f2fe; margin-bottom: 15px;">

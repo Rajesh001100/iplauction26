@@ -72,6 +72,7 @@ body {
     "players teams";
   grid-template-columns: 1fr 1fr;
   grid-template-rows: auto 1fr;
+  gap: 30px; /* Increased gap for projector */
 }
 
 .hidden { display: none !important; }
@@ -105,8 +106,8 @@ button {
 .btn-secondary:hover { background: rgba(192,192,192,0.2); color: white; }
 .btn-outline { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
 .btn-outline:hover { background: var(--primary); color: #000; box-shadow: var(--glow); }
-.btn-success { background: var(--success); color: white; padding: 12px 24px; font-size: 1.1rem; }
-.btn-danger { background: var(--danger); color: white; }
+.btn-success { background: var(--success); color: white; padding: 16px 32px; font-size: 1.5rem; font-weight: 900; }
+.btn-danger { background: var(--danger); color: white; padding: 12px 24px; font-size: 1.1rem; }
 .btn-danger:hover { background: #dc2626; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); transform: translateY(-1px); }
 .btn-warning { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
 .btn-warning:hover { background: linear-gradient(135deg, #fbbf24, #f59e0b); box-shadow: 0 0 15px rgba(245, 158, 11, 0.4); }
@@ -260,11 +261,11 @@ button {
 }
 
 .is-admin .active-card .player-img {
-  width: 35% !important;
-  height: 450px !important;
+  width: 38% !important; /* Slightly wider */
+  height: 550px !important; /* Taller hero image */
   object-fit: cover !important;
   border-bottom: none !important;
-  border-right: 3px solid var(--primary) !important;
+  border-right: 4px solid var(--primary) !important;
 }
 
 .is-admin .active-card .player-info {
@@ -284,8 +285,9 @@ button {
 }
 
 .is-admin .active-card .timer-value {
-  font-size: 2.2rem; /* Small as requested */
+  font-size: 3.5rem; /* Larger timer for projector */
   font-weight: 850;
+  line-height: 1;
 }
 .player-img { 
   width: 100%; 
@@ -296,26 +298,26 @@ button {
   filter: contrast(1.1) saturate(1.2); /* Refined quality boost */
 }
 .player-info { padding: 20px; }
-.player-name { font-size: 1.8rem; font-weight: 800; margin-bottom: 5px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
-.player-role { font-size: 1rem; color: var(--text-muted); margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+.player-name { font-size: 3rem; font-weight: 900; margin-bottom: 8px; color: #fff; text-shadow: 0 4px 8px rgba(0,0,0,0.6); }
+.player-role { font-size: 1.4rem; color: var(--text-muted); margin-bottom: 25px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; }
 .bid-details { background: rgba(0,0,0,0.6); padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid rgba(192,192,192,0.1); }
 .current-bid { 
-  font-size: 2.8rem; 
-  font-weight: 800; 
+  font-size: 4.5rem; /* Massive bid for projector */
+  font-weight: 900; 
   color: var(--primary); 
-  text-shadow: 0 0 20px rgba(212, 175, 55, 0.3); 
+  text-shadow: 0 0 30px rgba(212, 175, 55, 0.4); 
+  line-height: 1.1;
 }
-.current-bidder { font-size: 1rem; color: var(--text-muted); }
+.current-bidder { font-size: 1.5rem; color: var(--text-muted); font-weight: 600; }
 
 /* Player Stats */
 .player-stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  margin-bottom: 20px;
-  border-top: 1px solid rgba(192,192,192,0.15);
-  border-left: 1px solid rgba(192,192,192,0.15);
-  background: rgba(10, 10, 10, 0.4);
-  border-radius: 8px;
+  margin-bottom: 25px;
+  border: 1px solid rgba(192,192,192,0.2);
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 12px;
   overflow: hidden;
   max-width: 100%;
 }
@@ -333,16 +335,16 @@ button {
   border-bottom: none;
 }
 .stat-value {
-  font-size: 1.1rem; /* Slightly smaller to fit more */
-  font-weight: 700;
+  font-size: 1.4rem; /* Larger stats */
+  font-weight: 800;
   color: #fff;
   margin-bottom: 2px;
 }
 .stat-label {
-  font-size: 0.70rem;
+  font-size: 0.85rem; /* Larger labels */
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
 }
 
 /* Controls */

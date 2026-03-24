@@ -246,7 +246,7 @@ function updateTimerUI(endTime) {
 
     timerVal.textContent = remaining > 0 ? remaining : "0";
 
-    if (remaining <= 5 && remaining > 0) {
+    if (remaining <= 2 && remaining > 0) {
       timerVal.classList.add('timer-low');
     } else {
       timerVal.classList.remove('timer-low');
@@ -482,7 +482,7 @@ function renderLiveAuction() {
     ${player.jerseyNumber ? `<div class="jersey-badge" title="Jersey #${player.jerseyNumber}">${player.jerseyNumber}</div>` : ''}
     <div class="bid-timer-container">
        <span class="timer-label">TIME REMAINING</span>
-       <span class="timer-value ${timer <= 10 ? 'timer-low' : ''}" id="timer-value">${timer}</span>
+       <span class="timer-value ${timer <= 2 ? 'timer-low' : ''}" id="timer-value">${timer}</span>
     </div>
     <img src="${img}" alt="${player.name}" class="player-img">
     <div class="player-info">
@@ -513,7 +513,7 @@ function renderLiveAuction() {
 
     // Use fixed increments
     const bidBtns = document.querySelectorAll('.btn-bid');
-    const fixedIncrements = [10, 20, 50, 100];
+    const fixedIncrements = [5, 10, 20, 50, 100];
 
     bidBtns.forEach((btn, idx) => {
       const inc = fixedIncrements[idx];
@@ -928,7 +928,7 @@ function calculateAndShowLeaderboard() {
     });
 
     if (squad.length < 18) {
-      strategyScore -= 50; // Under-size penalty
+      strategyScore -= 100; // Under-size penalty (Strict 18 rule)
       metAll = false;
     }
     if (metAll) strategyScore += 25; // Complete Squad Bonus
@@ -940,7 +940,7 @@ function calculateAndShowLeaderboard() {
 
     // 8. Mandatory 75% Spend Penalty (-50 pts if spent < 7,500L)
     if (spent < 7500) {
-      strategyScore -= 50;
+      strategyScore -= 100; // Mandatory 75% Spend Penalty (Increased for consistency)
     }
 
     const totalScore = (performanceScore + strategyScore + specialistBonuses + budgetBonus).toFixed(1);
