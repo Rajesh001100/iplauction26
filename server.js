@@ -467,18 +467,22 @@ io.on('connection', (socket) => {
 
   socket.on('acceleratedRound', async () => {
     saveHistory();
+    let movedCount = 0;
     // Move all unsold players back to upcoming
     db.players.forEach(p => {
       if (p.status === 'unsold') {
         p.status = 'upcoming';
+        movedCount++;
       }
     });
 
     try {
       await supabase.from('players').update({ status: 'upcoming' }).eq('status', 'unsold');
-      console.log('Accelerated round: moved unsold players back to upcoming');
+      console.log(`Accelerated round: moved ${movedCount} unsold players back to upcoming`);
+      socket.emit('acceleratedRoundResult', { success: true, movedCount });
     } catch (err) {
       console.error('Error updating players for accelerated round:', err);
+      socket.emit('acceleratedRoundResult', { success: false, error: 'Database update failed' });
     }
 
     io.emit('stateUpdate', { players: db.players });

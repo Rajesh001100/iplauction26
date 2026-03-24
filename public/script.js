@@ -210,6 +210,18 @@ socket.on('auctionError', (msg) => {
   alert('Auction Rule Warning: ' + msg);
 });
 
+socket.on('acceleratedRoundResult', (res) => {
+  if (res.success) {
+    if (res.movedCount > 0) {
+      alert(`Success! ${res.movedCount} unsold players have been moved back to the Upcoming list.`);
+    } else {
+      alert("No 'Unsold' players found to move.");
+    }
+  } else {
+    alert("Error: " + (res.error || "Failed to process accelerated round."));
+  }
+});
+
 socket.on('playerSold', (data) => {
   soldSound.play().catch(e => console.log("Sound play failed", e));
   speak(`${data.player.name} is SOLD to ${data.team.name} for ${formatMoney(data.price)}!`);
@@ -715,6 +727,13 @@ if (btnAccelerated) {
   btnAccelerated.addEventListener('click', () => {
     if (confirm("Move all unsold players back to upcoming for an accelerated round?")) {
       socket.emit('acceleratedRound');
+      // Automatically switch to Upcoming tab to show results
+      currentTab = 'upcoming';
+      tabBtns.forEach(b => {
+        b.classList.remove('active');
+        if (b.dataset.tab === 'upcoming') b.classList.add('active');
+      });
+      renderPlayersList();
     }
   });
 }
