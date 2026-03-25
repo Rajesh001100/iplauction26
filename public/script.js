@@ -668,7 +668,7 @@ function lockBidButtons() {
   setTimeout(() => {
     isBidLocked = false;
     buttons.forEach(btn => btn.disabled = false);
-  }, 2000);
+  }, 3000);
 }
 
 // Attach listeners to bid buttons (this needs to be done once, but buttons are sometimes re-rendered)
