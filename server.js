@@ -42,8 +42,7 @@ let db = {
     activePlayerId: null,
     currentBid: 0,
     currentBidderId: null,
-    timer: 10, // Default 10s
-    isTimerRunning: false,
+    lastBidTime: 0,
     isAudioEnabled: true
   }
 };
@@ -54,43 +53,6 @@ function saveHistory() {
   lastDbState = JSON.parse(JSON.stringify(db));
 }
 
-// Timer Logic
-let timerInterval = null;
-function startTimer() {
-  stopTimer();
-  db.globalState.timer = 10; // 10 seconds
-  db.globalState.timerEndTime = Date.now() + (db.globalState.timer * 1000);
-  continueTimer();
-}
-
-function continueTimer() {
-  if (timerInterval) clearInterval(timerInterval);
-  db.globalState.isTimerRunning = true;
-  db.globalState.timerEndTime = Date.now() + (db.globalState.timer * 1000);
-
-  timerInterval = setInterval(() => {
-    const remaining = Math.max(0, Math.ceil((db.globalState.timerEndTime - Date.now()) / 1000));
-    db.globalState.timer = remaining;
-
-    if (db.globalState.timer > 0) {
-      io.emit('timerUpdate', {
-        seconds: db.globalState.timer,
-        endTime: db.globalState.timerEndTime
-      });
-    } else {
-      stopTimer();
-      io.emit('auctionTimeout');
-    }
-  }, 1000);
-}
-
-function stopTimer() {
-  if (timerInterval) clearInterval(timerInterval);
-  db.globalState.isTimerRunning = false;
-  db.globalState.timer = 0;
-  db.globalState.timerEndTime = null;
-  io.emit('timerUpdate', { seconds: 0, endTime: null });
-}
 
 // ... syncFromSupabase remains similar ...
 
@@ -152,8 +114,6 @@ io.on('connection', (socket) => {
         db.globalState.currentBid = player.basePrice;
         db.globalState.currentBidderId = null;
 
-        startTimer();
-
         await supabase.from('global_state').update({
           activePlayerId: playerId,
           currentBid: player.basePrice,
@@ -170,31 +130,16 @@ io.on('connection', (socket) => {
 
   socket.on('placeBid', async ({ teamId, amount }) => {
     try {
-      if (!db.globalState.isTimerRunning || db.globalState.timer <= 0) {
-        socket.emit('auctionError', 'Bidding has ended for this player!');
-        return;
-      }
-      const team = db.teams.find(t => t.id === teamId);
-      if (!team) return;
-
-      if (team.isEliminated) {
-        socket.emit('auctionError', 'This franchise has been ELIMINATED by the Auctioneer and cannot bid!');
-        return;
-      }
-
-      const player = db.players.find(p => p.id === db.globalState.activePlayerId);
-      if (!player) return;
-
-      if (teamId === db.globalState.currentBidderId) {
-        socket.emit('auctionError', 'You are already the highest bidder!');
-        return;
-      }
-
       if ((amount > db.globalState.currentBid || (amount === db.globalState.currentBid && !db.globalState.currentBidderId)) && amount <= team.budget) {
+        const now = Date.now();
+        if (now - (db.globalState.lastBidTime || 0) < 2000) {
+          socket.emit('auctionError', 'Please wait for the auctioneer to announce the bid (2s delay)!');
+          return;
+        }
+
         db.globalState.currentBid = amount;
         db.globalState.currentBidderId = teamId;
-
-        startTimer(); // Reset timer on every bid
+        db.globalState.lastBidTime = now;
 
         await supabase.from('global_state').update({
           currentBid: amount,
@@ -241,7 +186,6 @@ io.on('connection', (socket) => {
           team.budget -= price;
           team.players.push(player.id);
 
-          stopTimer();
           db.globalState.activePlayerId = null;
           db.globalState.currentBid = 0;
           db.globalState.currentBidderId = null;
@@ -268,7 +212,6 @@ io.on('connection', (socket) => {
       const player = db.players.find(p => p.id === db.globalState.activePlayerId);
       if (player) {
         player.status = 'unsold';
-        stopTimer();
         db.globalState.activePlayerId = null;
         await Promise.all([
           supabase.from('players').update({ status: 'unsold' }).eq('id', player.id),
@@ -306,23 +249,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('addExtraTime', (seconds) => {
-    const amount = seconds || 60;
-    if (db.globalState.activePlayerId) {
-      db.globalState.timer += amount;
-      db.globalState.timerEndTime = (db.globalState.timerEndTime || Date.now()) + (amount * 1000);
-
-      if (!db.globalState.isTimerRunning) {
-        continueTimer();
-      } else {
-        io.emit('timerUpdate', {
-          seconds: db.globalState.timer,
-          endTime: db.globalState.timerEndTime
-        });
-        io.emit('stateUpdate', { globalState: db.globalState });
-      }
-    }
-  });
 
   socket.on('toggleAudio', ({ isEnabled }) => {
     db.globalState.isAudioEnabled = isEnabled;
@@ -431,7 +357,6 @@ io.on('connection', (socket) => {
     db.globalState.activePlayerId = null;
     db.globalState.currentBid = 0;
     db.globalState.currentBidderId = null;
-    stopTimer();
 
     // Sync to Supabase
     try {

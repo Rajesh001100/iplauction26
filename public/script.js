@@ -50,8 +50,7 @@ let appState = {
   globalState: {
     activePlayerId: null,
     currentBid: 0,
-    currentBidderId: null,
-    timer: 0
+    currentBidderId: null
   }
 };
 let currentTab = 'upcoming';
@@ -172,9 +171,6 @@ socket.on('initialState', (state) => {
     if (audioToggle) audioToggle.checked = isAudioEnabled;
   }
   populateLoginDropdown();
-  if (appState.globalState && appState.globalState.timerEndTime) {
-    startClientTimer(appState.globalState.timerEndTime);
-  }
   if (currentUser) {
     renderApp();
   }
@@ -207,11 +203,6 @@ socket.on('stateUpdate', (partialState) => {
     }
   }
 
-  if (appState.globalState && appState.globalState.timerEndTime) {
-    startClientTimer(appState.globalState.timerEndTime);
-  } else if (appState.globalState && !appState.globalState.timerEndTime) {
-    if (clientTimerInterval) clearInterval(clientTimerInterval);
-  }
   if (currentUser) {
     renderApp();
   }
@@ -239,82 +230,6 @@ socket.on('playerSold', (data) => {
   showSoldAnimation(data);
 });
 
-let clientTimerInterval = null;
-function startClientTimer(endTime) {
-  if (clientTimerInterval) clearInterval(clientTimerInterval);
-  updateTimerUI(endTime);
-  clientTimerInterval = setInterval(() => updateTimerUI(endTime), 100);
-}
-
-function updateTimerUI(endTime) {
-  const timerVal = document.getElementById('timer-value');
-  if (!timerVal) return;
-
-  const now = Date.now();
-  const remaining = endTime ? Math.max(0, Math.ceil((endTime - now) / 1000)) : 0;
-
-  // Unlock UI if time is added after a timeout
-  if (remaining > 0) {
-    const auctionControlsDisplay = document.getElementById('team-controls');
-    if (auctionControlsDisplay && (auctionControlsDisplay.style.pointerEvents === 'none' || auctionControlsDisplay.style.opacity === '0.5')) {
-      auctionControlsDisplay.style.opacity = '1';
-      auctionControlsDisplay.style.pointerEvents = 'auto';
-    }
-  }
-
-  // Only update if the value actually changed
-  if (remaining !== parseInt(timerVal.textContent)) {
-    // Prevent overwriting the "Bidding Ended" text if the timer finished
-    if (remaining === 0 && timerVal.textContent === "Bidding Ended") return;
-
-    timerVal.textContent = remaining > 0 ? remaining : "0";
-
-    if (remaining <= 2 && remaining > 0) {
-      timerVal.classList.add('timer-low');
-    } else {
-      timerVal.classList.remove('timer-low');
-    }
-
-    // Manage bidding buttons
-    const bidButtons = document.querySelectorAll('.btn-bid, #btn-bid-base');
-    if (remaining === 0) {
-      bidButtons.forEach(btn => btn.disabled = true);
-    } else {
-      bidButtons.forEach(btn => btn.disabled = false);
-    }
-  }
-}
-
-socket.on('timerUpdate', (data) => {
-  const seconds = typeof data === 'object' ? data.seconds : data;
-  const endTime = typeof data === 'object' ? data.endTime : null;
-
-  appState.globalState.timer = seconds;
-  appState.globalState.timerEndTime = endTime;
-
-  if (endTime) {
-    startClientTimer(endTime);
-  } else {
-    if (clientTimerInterval) clearInterval(clientTimerInterval);
-    const timerVal = document.getElementById('timer-value');
-    if (timerVal) timerVal.textContent = seconds || "0";
-  }
-});
-
-socket.on('auctionTimeout', () => {
-  if (clientTimerInterval) clearInterval(clientTimerInterval);
-  document.querySelectorAll('.btn-bid, #btn-bid-base').forEach(btn => btn.disabled = true);
-  const timerVal = document.getElementById('timer-value');
-  if (timerVal) {
-    timerVal.textContent = "Bidding Ended";
-    timerVal.classList.add('timer-low');
-  }
-  const auctionControlsDisplay = document.getElementById('team-controls');
-  if (auctionControlsDisplay) {
-    auctionControlsDisplay.style.opacity = '0.5';
-    auctionControlsDisplay.style.pointerEvents = 'none';
-  }
-});
 
 function populateLoginDropdown() {
   const rs = document.getElementById('role');
@@ -503,10 +418,6 @@ function renderLiveAuction() {
 
   activePlayerCard.innerHTML = `
     ${player.jerseyNumber ? `<div class="jersey-badge" title="Jersey #${player.jerseyNumber}">${player.jerseyNumber}</div>` : ''}
-    <div class="bid-timer-container">
-       <span class="timer-label">TIME REMAINING</span>
-       <span class="timer-value ${timer <= 2 ? 'timer-low' : ''}" id="timer-value">${timer}</span>
-    </div>
     <img src="${img}" alt="${player.name}" class="player-img">
     <div class="player-info">
       <div class="player-name">${player.name} ${player.isOverseas ? '✈️' : ''}</div>
@@ -524,9 +435,6 @@ function renderLiveAuction() {
     </div>
   `;
 
-  if (appState.globalState.timerEndTime) {
-    updateTimerUI(appState.globalState.timerEndTime);
-  }
 
   // Re-enable bidding UI for teams when a new player is set
   const teamControlsDisplay = document.getElementById('team-controls');
@@ -545,7 +453,7 @@ function renderLiveAuction() {
     });
   }
   document.querySelectorAll('.btn-bid, #btn-bid-base').forEach(btn => {
-    btn.disabled = appState.globalState.timer === 0;
+    btn.disabled = false;
   });
 }
 
@@ -749,14 +657,36 @@ if (btnAccelerated) {
   });
 }
 
-// Role Filters Listener
-document.querySelectorAll('.filter-chip').forEach(chip => {
-  chip.addEventListener('click', () => {
-    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
-    currentRoleFilter = chip.dataset.role;
-    renderPlayersList();
-  });
+// Client-side bid lockout
+let isBidLocked = false;
+function lockBidButtons() {
+  if (isBidLocked) return;
+  isBidLocked = true;
+  const buttons = document.querySelectorAll('.btn-bid, #btn-bid-base');
+  buttons.forEach(btn => btn.disabled = true);
+  
+  setTimeout(() => {
+    isBidLocked = false;
+    buttons.forEach(btn => btn.disabled = false);
+  }, 2000);
+}
+
+// Attach listeners to bid buttons (this needs to be done once, but buttons are sometimes re-rendered)
+// Actually, it's better to use event delegation or attach when rendering.
+// Looking at the code, it seems the buttons are static in the HTML but their state is managed.
+// Wait, they are in the HTML. Let's add listeners.
+
+document.addEventListener('click', (e) => {
+  if (e.target.classList.contains('btn-bid') || e.target.id === 'btn-bid-base') {
+    if (isBidLocked) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    
+    // The actual bid logic is likely elsewhere. Let's find it.
+    // I need to find where the click listeners for bids are.
+  }
 });
 
 // Admin Modal Logic for Dynamic Stats Labels
@@ -1299,6 +1229,7 @@ document.querySelectorAll('.btn-bid').forEach(btn => {
       return;
     }
 
+    lockBidButtons();
     socket.emit('placeBid', { teamId: currentUser.id, amount: newTotal });
   });
 });
@@ -1319,6 +1250,7 @@ if (btnBidBase) {
     }
 
     console.log(`Attempting base price bid for player ${player.name} at amount ${player.basePrice}`);
+    lockBidButtons();
     socket.emit('placeBid', { teamId: currentUser.id, amount: player.basePrice });
   });
 }
