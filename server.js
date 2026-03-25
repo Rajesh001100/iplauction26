@@ -138,8 +138,8 @@ io.on('connection', (socket) => {
 
       if ((amount > db.globalState.currentBid || (amount === db.globalState.currentBid && !db.globalState.currentBidderId)) && amount <= team.budget) {
         const now = Date.now();
-        if (now - (db.globalState.lastBidTime || 0) < 3000) {
-          socket.emit('auctionError', 'Please wait for the auctioneer to announce the bid (3s delay)!');
+        if (now - (db.globalState.lastBidTime || 0) < 2000) {
+          socket.emit('auctionError', 'Please wait for the auctioneer to announce the bid (2s delay)!');
           return;
         }
 

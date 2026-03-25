@@ -115,6 +115,7 @@ const teamControls = document.getElementById('team-controls');
 const playersContainer = document.getElementById('players-container');
 const teamsContainer = document.getElementById('teams-container');
 const tabBtns = document.querySelectorAll('.tab-btn');
+const filterChips = document.querySelectorAll('.filter-chip');
 
 const adminAddPlayer = document.getElementById('admin-add-player');
 const btnNewPlayer = document.getElementById('btn-new-player');
@@ -631,6 +632,16 @@ tabBtns.forEach(btn => {
   });
 });
 
+// Role Filters
+filterChips.forEach(chip => {
+  chip.addEventListener('click', (e) => {
+    filterChips.forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    currentRoleFilter = chip.dataset.role;
+    renderPlayersList();
+  });
+});
+
 // Admin: Start Auction
 window.startAuction = function (playerId) {
   if (appState.globalState.activePlayerId) {
@@ -668,7 +679,7 @@ function lockBidButtons() {
   setTimeout(() => {
     isBidLocked = false;
     buttons.forEach(btn => btn.disabled = false);
-  }, 3000);
+  }, 2000);
 }
 
 // Attach listeners to bid buttons (this needs to be done once, but buttons are sometimes re-rendered)
